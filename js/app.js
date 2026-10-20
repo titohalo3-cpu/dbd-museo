@@ -236,6 +236,25 @@ function buildHead(type,M,p){
       add(new THREE.CapsuleGeometry(0.045,0.3,4,8),std('#cfc7bb',0.85,0),-0.09,0.34,-0.02,0,0,0.2);
       add(new THREE.CapsuleGeometry(0.045,0.3,4,8),std('#cfc7bb',0.85,0),0.09,0.34,-0.02,0,0,-0.2);
       eyes(0.02,0.14); break;
+    case 'animatronic': {
+      const cr=new THREE.Mesh(new THREE.SphereGeometry(0.165,18,14),M.cloth);
+      cr.position.set(0,0.02,0); cr.scale.set(1.02,1.06,0.99); g.add(cr);
+      add(new THREE.BoxGeometry(0.2,0.12,0.16),M.cloth,0,-0.055,0.115);
+      add(new THREE.BoxGeometry(0.075,0.05,0.035),M.dark,0,-0.005,0.205);
+      add(new THREE.BoxGeometry(0.18,0.05,0.14),M.metal,0,-0.12,0.11);
+      for(let i=0;i<4;i++){add(new THREE.BoxGeometry(0.022,0.032,0.012),std('#d8d4c8',0.5,0.2),-0.06+i*0.04,-0.078,0.192);}
+      add(new THREE.SphereGeometry(0.036,10,8),M.dark,-0.062,0.035,0.135);
+      add(new THREE.SphereGeometry(0.036,10,8),M.dark,0.062,0.035,0.135);
+      add(new THREE.SphereGeometry(0.022,8,8),glowMat,-0.062,0.035,0.158);
+      add(new THREE.SphereGeometry(0.022,8,8),glowMat,0.062,0.035,0.158);
+      add(new THREE.CapsuleGeometry(0.048,0.32,4,8),M.cloth,-0.1,0.37,-0.02,0,0,0.12);
+      add(new THREE.CapsuleGeometry(0.042,0.26,4,8),M.cloth,0.11,0.31,-0.03,0,0,-0.4);
+      add(new THREE.CapsuleGeometry(0.024,0.24,4,8),M.dark,-0.1,0.37,0.012,0,0,0.12);
+      add(new THREE.CapsuleGeometry(0.02,0.2,4,8),M.dark,0.11,0.31,0.002,0,0,-0.4);
+      add(new THREE.BoxGeometry(0.055,0.13,0.07),M.metal,0.15,-0.01,0.03);
+      add(new THREE.CylinderGeometry(0.012,0.012,0.1,6),M.dark,0.16,0.06,0.04,0,0,0.3);
+      break;
+    }
     case 'pinhead':
       eyes(0.02,0.15,new THREE.MeshBasicMaterial({color:'#2a2a30'}));
       for(let r=0;r<4;r++){
@@ -309,6 +328,7 @@ function buildStatue(def,vi){
   const belt=new THREE.Mesh(new THREE.TorusGeometry(tw*0.82,0.03,8,20),M.accent);
   belt.rotation.x=Math.PI/2;
   belt.position.set(0,torsoY+0.06,0);
+  if(def.l.e==='bowtie') belt.material=M.dark;
   body.add(belt);
   for(let i=0;i<2;i++){
     const s=i?1:-1;
@@ -376,6 +396,18 @@ function buildStatue(def,vi){
     const boss=new THREE.Mesh(new THREE.SphereGeometry(0.09,10,8),M.accent);
     boss.position.set(-(tw+0.16),torsoY+0.3,0.05);
     body.add(boss);
+  }
+  if(ex==='bowtie'){
+    const k1=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.065,0.035),M.accent);
+    k1.position.set(-0.06,torsoY+0.63,0.27); k1.rotation.z=0.22; body.add(k1);
+    const k2=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.065,0.035),M.accent);
+    k2.position.set(0.06,torsoY+0.63,0.27); k2.rotation.z=-0.22; body.add(k2);
+    const kn=new THREE.Mesh(new THREE.SphereGeometry(0.035,8,8),M.accent);
+    kn.position.set(0,torsoY+0.63,0.285); body.add(kn);
+    for(let i=0;i<2;i++){
+      const bt=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,6),M.dark);
+      bt.position.set(0,torsoY+0.36-i*0.16,0.285); body.add(bt);
+    }
   }
   if(ex==='ghost'){
     const aura=new THREE.Mesh(new THREE.ConeGeometry(0.5,1.7,20,1,true),new THREE.MeshBasicMaterial({color:'#dfe8ff',transparent:true,opacity:0.07,side:THREE.DoubleSide,depthWrite:false}));

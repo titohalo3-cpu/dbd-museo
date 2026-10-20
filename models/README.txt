@@ -7,6 +7,7 @@ Coloca aqui tus archivos .glb / .gltf con este nombre:
 
     demogorgon.glb            The Demogorgon        <- YA INCLUIDO
     trickster.glb             The Trickster         <- YA INCLUIDO
+    animatronic.glb           The Animatronic
     trapper.glb               The Trapper
     huntress.glb              The Huntress
 
@@ -41,4 +42,4 @@ nurse, shape, hag, doctor, huntress, cannibal, nightmare, pig, clown, spirit,
 legion, plague, ghostface, demogorgon, oni, deathslinger, executioner,
 blight, twins, trickster, nemesis, cenobite, artist, onryo, dredge, mastermind,
 knight, merchant, singularity, xenomorph, goodguy, darklord, lich, houndmaster,
-ghoul, slasher.
+ghoul, animatronic, slasher.

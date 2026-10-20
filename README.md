@@ -1,6 +1,6 @@
 # El Museo de los Asesinos — proyecto Dead by Daylight 3D
 
-Galería interactiva con 38 asesinos, un único **modelo base** por asesino, hecha con Three.js.
+Galería interactiva con 39 asesinos, un único **modelo base** por asesino, hecha con Three.js.
 Cada figura se puede girar (arrastrar) y acercar (rueda); el modelo base se sustituye
 cargando un `.glb` real.
 
@@ -8,7 +8,7 @@ cargando un `.glb` real.
 
     dbd-museo/
       index.html                  Página del museo
-      js/data.js                  Los 38 asesinos: id, capítulo, arma, colores y aspecto
+      js/data.js                  Los 39 asesinos: id, capítulo, arma, colores y aspecto
       js/app.js                   Motor 3D: sala, pedestales, figuras, carga de modelos
       js/library.js               Biblioteca: modelos en el navegador o desde una carpeta
       models/demogorgon.glb       Modelo real (Sketchfab) — ya integrado
@@ -31,6 +31,9 @@ cargando un `.glb` real.
      cargan solos la próxima vez. No ocupan espacio en el proyecto.
    - **Automático**: ejecuta `servir.bat` y abre <http://localhost:8080>. El museo
      lee `models/manifest.json` y carga los modelos incluidos (Demogorgon y Trickster).
+     El hueco de The Animatronic ya existe y se dibuja con la figura procedural;
+     para usar un modelo real, coloca `models/animatronic.glb` y añade
+     `"animatronic": "models/animatronic.glb"` al manifest.
    - **A mano**: botón **Cargar .glb** (puedes seleccionar el `.glb` o el conjunto
      `.gltf` + `.bin` + texturas con `Ctrl+A`), botón **Cargar carpeta**, o
      arrastrando archivos/carpetas sobre la escena.
@@ -68,7 +71,7 @@ campo `id` de `js/data.js` (trapper, wraith, hillbilly, nurse, shape, hag, docto
 huntress, cannibal, nightmare, pig, clown, spirit, legion, plague, ghostface,
 **demogorgon**, oni, deathslinger, executioner, blight, twins, trickster, nemesis,
 cenobite, artist, onryo, dredge, mastermind, knight, merchant, singularity,
-xenomorph, goodguy, darklord, lich, houndmaster, ghoul, slasher).
+xenomorph, goodguy, darklord, lich, houndmaster, ghoul, animatronic, slasher).
 
 Si el nombre del archivo no coincide con ningún asesino, se asigna al que tengas
 seleccionado en ese momento.
