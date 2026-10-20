@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<title>Construir The Trickster</title>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<style>
+html,body{margin:0;height:100%;background:#0b0b0e;color:#ddd;font:12px/1.5 monospace;overflow:hidden}
+#log{position:fixed;left:12px;top:12px;z-index:2;white-space:pre-wrap;max-width:420px;background:rgba(0,0,0,.55);padding:10px 12px;border:1px solid #333}
+canvas{display:block}
+</style>
+</head><body>
+<div id="log">construyendo…</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+const logEl = document.getElementById('log');
+const log = m => { logEl.textContent += '\n' + m; };
+
+/* ============================ texturas ============================ */
+function cnv(w,h,draw){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const g=c.getContext('2d'); draw(g,w,h);
+  const t=new THREE.CanvasTexture(c);
+  t.colorSpace=THREE.SRGBColorSpace;
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  t.anisotropy=4;
+  return t;
+}
+const ir=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+
+const skinTex=cnv(256,256,(g,w,h)=>{
+  g.fillStyle='#d9b49f'; g.fillRect(0,0,w,h);
+  for(let i=0;i<150;i++){
+    g.fillStyle='rgba('+ir(185,235)+','+ir(150,190)+','+ir(135,175)+','+(0.04+Math.random()*0.11).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,ir(5,28),ir(4,16),Math.random()*3,0,Math.PI*2); g.fill();
+  }
+});
+
+const chestTex=cnv(512,512,(g,w,h)=>{
+  g.fillStyle='#dcb8a2'; g.fillRect(0,0,w,h);
+  for(let i=0;i<160;i++){
+    g.fillStyle='rgba('+ir(180,228)+','+ir(145,185)+','+ir(130,170)+','+(0.05+Math.random()*0.10).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,ir(6,34),ir(5,20),Math.random()*3,0,Math.PI*2); g.fill();
+  }
+  // sangre cayendo desde cuello/pecho
+  for(let i=0;i<10;i++){
+    const x=150+Math.random()*210, y0=Math.random()*26, len=90+Math.random()*240, wd=2+Math.random()*6;
+    g.fillStyle='rgba('+ir(92,132)+','+ir(4,14)+','+ir(8,22)+','+(0.55+Math.random()*0.3).toFixed(2)+')';
+    g.beginPath();
+    g.moveTo(x,y0);
+    g.bezierCurveTo(x+wd*0.7, y0+len*0.35, x-wd*0.5, y0+len*0.72, x+1, y0+len);
+    g.lineTo(x+wd*0.65, y0+len);
+    g.bezierCurveTo(x+wd*0.5, y0+len*0.66, x+wd*1.5, y0+len*0.3, x+wd*0.85, y0);
+    g.closePath(); g.fill();
+  }
+  for(let i=0;i<70;i++){
+    g.fillStyle='rgba('+ir(85,125)+','+ir(3,12)+','+ir(6,18)+','+(0.4+Math.random()*0.4).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w, Math.random()*h, ir(1,5), ir(2,9), 0, 0, Math.PI*2); g.fill();
+  }
+});
+
+const coatTex=cnv(512,512,(g,w,h)=>{
+  g.fillStyle='#a67c1e'; g.fillRect(0,0,w,h);
+  g.strokeStyle='rgba(214,184,104,0.24)'; g.lineWidth=13;
+  for(let i=-512;i<1024;i+=72){
+    g.beginPath(); g.moveTo(i,0); g.lineTo(i+512,512); g.stroke();
+    g.beginPath(); g.moveTo(i,512); g.lineTo(i+512,0); g.stroke();
+  }
+  g.strokeStyle='rgba(90,66,16,0.09)'; g.lineWidth=2;
+  for(let y=0;y<h;y+=9){ g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke(); }
+  for(let i=0;i<90;i++){
+    g.fillStyle='rgba(40,30,8,'+(0.04+Math.random()*0.08).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,ir(8,42),ir(6,30),Math.random()*3,0,Math.PI*2); g.fill();
+  }
+  for(let i=0;i<34;i++){
+    g.fillStyle='rgba('+ir(95,140)+','+ir(6,18)+','+ir(8,22)+','+(0.3+Math.random()*0.45).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w, h*0.35+Math.random()*h*0.65, ir(2,9), ir(2,12), Math.random()*3, 0, Math.PI*2); g.fill();
+  }
+});
+
+const pantsTex=cnv(512,512,(g,w,h)=>{
+  g.fillStyle='#8e1f5a'; g.fillRect(0,0,w,h);
+  for(let x=6;x<w;x+=36){ g.fillStyle='#dcbb4a'; g.fillRect(x,0,4,h); }
+  const lg=g.createLinearGradient(0,0,0,h);
+  lg.addColorStop(0,'rgba(0,0,0,0.07)'); lg.addColorStop(0.35,'rgba(0,0,0,0)');
+  lg.addColorStop(0.75,'rgba(0,0,0,0)'); lg.addColorStop(1,'rgba(0,0,0,0.28)');
+  g.fillStyle=lg; g.fillRect(0,0,w,h);
+  for(let i=0;i<80;i++){
+    g.fillStyle='rgba(20,0,12,'+(0.05+Math.random()*0.14).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,ir(5,26),ir(5,22),Math.random()*3,0,Math.PI*2); g.fill();
+  }
+
+});
+
+const hairTex=cnv(256,256,(g,w,h)=>{
+  const lg=g.createLinearGradient(0,0,0,h);
+  lg.addColorStop(0,'#efeaf6'); lg.addColorStop(0.55,'#d6cce8'); lg.addColorStop(1,'#b2a1cf');
+  g.fillStyle=lg; g.fillRect(0,0,w,h);
+  for(let i=0;i<130;i++){
+    g.strokeStyle='rgba('+ir(120,175)+','+ir(100,150)+','+ir(150,200)+','+(0.12+Math.random()*0.3).toFixed(2)+')';
+    g.lineWidth=1+Math.random()*2;
+    const x=Math.random()*w, y=Math.random()*h;
+    g.beginPath(); g.moveTo(x,y); g.quadraticCurveTo(x+ir(-10,10),y+ir(-40,40),x+ir(-14,14),y+ir(-70,70)); g.stroke();
+  }
+});
+
+const bootTex=cnv(256,256,(g,w,h)=>{
+  g.fillStyle='#33241d'; g.fillRect(0,0,w,h);
+  for(let i=0;i<120;i++){
+    g.fillStyle='rgba('+ir(20,70)+','+ir(14,50)+','+ir(10,40)+','+(0.15+Math.random()*0.35).toFixed(2)+')';
+    g.beginPath(); g.ellipse(Math.random()*w,Math.random()*h,ir(4,26),ir(3,18),Math.random()*3,0,Math.PI*2); g.fill();
+  }
+  for(let i=0;i<30;i++){
+    g.strokeStyle='rgba(150,120,95,'+(0.05+Math.random()*0.18).toFixed(2)+')'; g.lineWidth=1;
+    g.beginPath(); const x=Math.random()*w,y=Math.random()*h; g.moveTo(x,y); g.lineTo(x+ir(-30,30),y+ir(-14,14)); g.stroke();
+  }
+});
+
+const woodTex=cnv(256,256,(g,w,h)=>{
+  g.fillStyle='#8a5a34'; g.fillRect(0,0,w,h);
+  for(let i=0;i<60;i++){
+    g.strokeStyle='rgba('+ir(40,80)+','+ir(22,50)+','+ir(10,30)+','+(0.2+Math.random()*0.4).toFixed(2)+')';
+    g.lineWidth=1+Math.random()*3;
+    const y=Math.random()*h;
+    g.beginPath(); g.moveTo(0,y); g.bezierCurveTo(w*0.33,y+ir(-10,10),w*0.66,y+ir(-10,10),w,y+ir(-6,6)); g.stroke();
+  }
+});
+
+/* ============================ materiales ============================ */
+const skinMat =new THREE.MeshStandardMaterial({map:skinTex, roughness:0.72});
+const chestMat=new THREE.MeshStandardMaterial({map:chestTex, roughness:0.70});
+coatTex.repeat.set(2.4,1.7);
+const coatMat =new THREE.MeshStandardMaterial({map:coatTex, roughness:0.84, side:THREE.DoubleSide});
+const pantsMat=new THREE.MeshStandardMaterial({map:pantsTex, roughness:0.83});
+const hairMat =new THREE.MeshStandardMaterial({map:hairTex, roughness:0.55});
+const bootMat =new THREE.MeshStandardMaterial({map:bootTex, roughness:0.66});
+const woodMat =new THREE.MeshStandardMaterial({map:woodTex, roughness:0.72});
+const metalMat=new THREE.MeshStandardMaterial({color:0xc9ccd4, metalness:0.85, roughness:0.32});
+const bloodMat=new THREE.MeshStandardMaterial({color:0x7c0c10, roughness:0.32});
+const eyeMat  =new THREE.MeshStandardMaterial({color:0xe2a81c, roughness:0.3, emissive:0x3a1e00, emissiveIntensity:0.5});
+const pupilMat=new THREE.MeshBasicMaterial({color:0x0a0a0a});
+const whiteMat=new THREE.MeshStandardMaterial({color:0xefe7dd, roughness:0.4});
+const darkMat =new THREE.MeshStandardMaterial({color:0x1a1518, roughness:0.6});
+
+/* ============================ geometría ============================ */
+const root=new THREE.Group(); root.name='Trickster';
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+const UP=V(0,1,0);
+
+function bone(a,b,rA,rB,mat,seg=12){
+  const dir=new THREE.Vector3().subVectors(b,a);
+  const len=dir.length();
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(rB,rA,len,seg,1),mat);
+  m.position.copy(a).addScaledVector(dir,0.5);
+  m.quaternion.setFromUnitVectors(UP,dir.clone().normalize());
+  return m;
+}
+function ball(p,r,mat,sx=1,sy=1,sz=1){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),mat);
+  m.position.copy(p); m.scale.set(sx,sy,sz);
+  return m;
+}
+function box(w,h,d,p,mat,rx=0,ry=0,rz=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.copy(p); m.rotation.set(rx,ry,rz);
+  return m;
+}
+function quad(a,b,c,d,mat){
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute([...a,...b,...c,...d],3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,1,0,1,1,0,1],2));
+  g.setIndex([0,1,2,0,2,3]);
+  g.computeVertexNormals();
+  return new THREE.Mesh(g,mat);
+}
+/* casco de arco: y0 abajo, y1 arriba; a0/a1 en radianes (0 = +Z, frente) */
+function arcShell(y0,y1,r0,r1,a0,a1,mat,seg=56,jag=0){
+  const pos=[],uv=[],idx=[];
+  for(let i=0;i<=seg;i++){
+    const t=i/seg, a=a0+(a1-a0)*t;
+    const yb=y0 + (jag?Math.sin(i*2.3)*jag*0.5+(i%5===0?-jag:0):0);
+    pos.push(Math.sin(a)*r1, y1, Math.cos(a)*r1);
+    pos.push(Math.sin(a)*r0, yb, Math.cos(a)*r0);
+    uv.push(t,1,t,0);
+  }
+  for(let i=0;i<seg;i++){
+    const a=i*2;
+    idx.push(a,a+2,a+1, a+1,a+2,a+3);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return new THREE.Mesh(g,mat);
+}
+function chain(p0,p1,sag,n,mat,linkR=0.012,tube=0.0035){
+  const dir=new THREE.Vector3().subVectors(p1,p0);
+  for(let i=0;i<n;i++){
+    const t=(i+0.5)/n;
+    const p=new THREE.Vector3().copy(p0).addScaledVector(dir,t);
+    p.y-=Math.sin(Math.PI*t)*sag;
+    const m=new THREE.Mesh(new THREE.TorusGeometry(linkR,tube,5,10),mat);
+    m.position.copy(p);
+    m.quaternion.setFromUnitVectors(V(0,0,1),dir.clone().normalize());
+    root.add(m);
+  }
+}
+
+/* ============================ cuerpo ============================ */
+// piernas / caderas
+const hipR=V(-0.095,0.98,0), kneeR=V(-0.115,0.54,0.015), ankR=V(-0.12,0.11,0.01);
+const hipL=V( 0.095,0.98,0), kneeL=V( 0.115,0.54,-0.005), ankL=V( 0.12,0.11,-0.01);
+
+root.add(ball(V(0,1.015,0.005),0.152,pantsMat,1,0.74,0.66));         // cadera
+root.add(ball(V(0,0.962,-0.005),0.082,pantsMat,1,0.5,0.5));         // ingle
+root.add(bone(hipR,kneeR,0.10,0.075,pantsMat));
+root.add(bone(hipL,kneeL,0.10,0.075,pantsMat));
+root.add(bone(kneeR,ankR,0.075,0.052,pantsMat));
+root.add(bone(kneeL,ankL,0.075,0.052,pantsMat));
+root.add(ball(kneeR,0.073,pantsMat,1,0.9,1));
+root.add(ball(kneeL,0.073,pantsMat,1,0.9,1));
+
+// torso desnudo
+root.add(ball(V(0,1.10,0.01),0.148,skinMat,1,0.72,0.66));
+root.add(ball(V(0,1.26,0.005),0.152,skinMat,1.0,0.88,0.62));
+root.add(ball(V(0,1.43,0.005),0.195,chestMat,0.96,0.84,0.60));
+root.add(ball(V(-0.068,1.452,0.098),0.068,chestMat,1,0.66,0.5));     // pectoral
+root.add(ball(V( 0.068,1.452,0.098),0.068,chestMat,1,0.66,0.5));
+for(const yy of [1.335,1.275,1.215]){                                // abdominales
+  root.add(ball(V(-0.03,yy,0.084),0.030,chestMat,0.85,0.7,0.35));
+  root.add(ball(V( 0.03,yy,0.084),0.030,chestMat,0.85,0.7,0.35));
+}
+root.add(ball(V(-0.19,1.52,0.0),0.075,chestMat,1,0.9,0.9));          // deltoides
+root.add(ball(V( 0.19,1.52,0.0),0.075,chestMat,1,0.9,0.9));
+
+// cuello / cabeza
+root.add(bone(V(0,1.57,0.0),V(0,1.70,0.01),0.062,0.055,skinMat,14));
+root.add(ball(V(0,1.79,0.012),0.105,skinMat,1,1.25,1.1));
+root.add(ball(V(0,1.715,0.04),0.083,skinMat,1,0.72,0.95));
+root.add(ball(V(-0.108,1.79,0.0),0.028,skinMat,0.5,1,0.9));
+root.add(ball(V( 0.108,1.79,0.0),0.028,skinMat,0.5,1,0.9));
+
+// nariz / boca
+root.add(box(0.026,0.042,0.030,V(0,1.789,0.121),skinMat,0.22));
+root.add(box(0.052,0.007,0.01,V(0,1.734,0.126),new THREE.MeshStandardMaterial({color:0x5a1418,roughness:0.4})));
+root.add(box(0.03,0.005,0.008,V(0.012,1.729,0.128),new THREE.MeshStandardMaterial({color:0xe8d8cf,roughness:0.5})));
+
+// ojos
+for(const sx of [-1,1]){
+  const x=sx*0.045;
+  root.add(ball(V(x,1.807,0.104),0.0185,whiteMat,1,0.65,0.5));
+  root.add(ball(V(x,1.807,0.114),0.0115,eyeMat,1,1,0.4));
+  root.add(ball(V(x,1.807,0.1195),0.0055,pupilMat,1,1,0.35));
+  root.add(box(0.052,0.010,0.010,V(x,1.840,0.116),darkMat,0,0,sx*0.16));
+}
+
+// sangre en cara y cuello
+root.add(bone(V(0.010,1.727,0.126),V(0.012,1.668,0.120),0.0045,0.003,bloodMat));
+root.add(ball(V(-0.024,1.722,0.123),0.004,bloodMat,0.8,1.2,0.5));
+
+// pelo
+root.add(ball(V(0,1.868,-0.048),0.138,hairMat,1.0,0.84,0.98));
+root.add(ball(V(0,1.81,-0.075),0.112,hairMat,1.05,1.0,0.9));
+{
+  const f=ball(V(0,1.905,0.045),0.075,hairMat,1.15,0.45,1.15);
+  f.rotation.x=-0.28; root.add(f);
+}
+{
+  const q=ball(V(0,1.94,0.015),0.085,hairMat,1.25,0.6,1.6);
+  q.rotation.x=-0.30; root.add(q);
+}
+const locks=[
+  [-0.072,1.932,0.03,-0.32,0.20],[-0.036,1.947,0.02,-0.34,0.09],
+  [ 0.036,1.947,0.02,-0.34,-0.09],[ 0.072,1.932,0.03,-0.32,-0.20]
+];
+for(const [x,y,z,rx,rz] of locks){
+  const m=ball(V(x,y,z),0.062,hairMat,0.56,0.6,1.5);
+  m.rotation.set(rx,0,rz);
+  root.add(m);
+}
+root.add(ball(V(-0.125,1.775,0.035),0.022,hairMat,0.45,1.1,0.8));
+root.add(ball(V( 0.125,1.775,0.035),0.022,hairMat,0.45,1.1,0.8));
+
+// brazos
+const shR=V(-0.19,1.52,0), elR=V(-0.375,1.71,-0.035), wrR=V(-0.25,1.955,0.045);
+const shL=V( 0.19,1.52,0), elL=V( 0.285,1.235,0.01), wrL=V( 0.335,0.99,0.055);
+
+root.add(bone(shR,elR,0.062,0.05,skinMat));
+root.add(bone(elR,wrR,0.048,0.036,skinMat));
+root.add(ball(elR,0.05,skinMat));
+root.add(bone(shL,elL,0.062,0.05,skinMat));
+root.add(bone(elL,wrL,0.048,0.036,skinMat));
+root.add(ball(elL,0.05,skinMat));
+
+// mangas del abrigo
+root.add(ball(shR,0.092,coatMat,1,0.92,1));
+root.add(ball(shL,0.092,coatMat,1,0.92,1));
+root.add(ball(elR,0.079,coatMat,1,1,1));
+root.add(bone(shR,elR,0.098,0.078,coatMat));
+root.add(bone(elR,wrR,0.075,0.062,coatMat));
+root.add(ball(elL,0.080,coatMat,1,1,1));
+root.add(bone(shL,elL,0.098,0.08,coatMat));
+root.add(bone(elL,wrL,0.077,0.066,coatMat));
+root.add(bone(V(-0.26,1.94,0.04),V(-0.245,1.975,0.05),0.078,0.074,coatMat)); // puño
+root.add(bone(V(0.336,1.005,0.055),V(0.334,0.955,0.06),0.08,0.075,coatMat));
+
+// manos
+root.add(ball(V(-0.252,1.972,0.045),0.045,skinMat,0.9,1.15,0.75));
+root.add(ball(V(0.334,0.985,0.06),0.042,skinMat,1,1.1,0.6));
+for(let i=0;i<4;i++){
+  const x=0.308+i*0.017;
+  root.add(bone(V(x,0.962,0.06),V(x+0.004,0.885,0.078),0.0105,0.0075,skinMat));
+}
+root.add(bone(V(0.352,0.995,0.07),V(0.392,0.945,0.085),0.012,0.0085,skinMat));
+
+/* ============================ abrigo ============================ */
+// cuerpo del abrigo, abierto por delante
+const coat=arcShell(0.52,1.575,0.335,0.225,0.74,Math.PI*2-0.74,coatMat,64,0.055);
+coat.scale.z=0.86;
+root.add(coat);
+
+// cuello alto
+const collar=arcShell(1.555,1.685,0.158,0.192,1.25,Math.PI*2-1.25,coatMat,40,0);
+collar.scale.z=0.88;
+root.add(collar);
+
+// solapas
+root.add(quad(
+  V(-0.012,1.628,0.150),V(-0.095,1.606,0.132),V(-0.208,1.330,0.152),V(-0.078,1.318,0.174),coatMat));
+root.add(quad(
+  V(0.012,1.628,0.150),V(0.095,1.606,0.132),V(0.208,1.330,0.152),V(0.078,1.318,0.174),coatMat));
+// (el abrigo queda abierto de pecho a bajo: sin paños frontales)
+
+/* ============================ cinturón y cadenas ============================ */
+const belt=new THREE.Mesh(new THREE.TorusGeometry(0.172,0.027,8,32),darkMat);
+belt.rotation.x=Math.PI/2; belt.position.set(0,1.105,0.005); belt.scale.z=0.82;
+root.add(belt);
+root.add(box(0.125,0.078,0.022,V(0,1.105,0.148),metalMat));
+root.add(box(0.058,0.026,0.026,V(0,1.105,0.152),darkMat));
+chain(V(-0.145,1.09,0.11),V(0.10,1.075,0.115),0.075,11,metalMat,0.011,0.0032);
+chain(V(-0.055,1.565,0.10),V(0.055,1.565,0.10),0.155,13,metalMat,0.010,0.0030);
+chain(V(-0.045,1.55,0.105),V(0.045,1.55,0.105),0.115,11,metalMat,0.009,0.0028);
+
+/* ============================ botas ============================ */
+for(const [x,z] of [[-0.12,0.01],[0.12,-0.01]]){
+  root.add(bone(V(x,0.11,z),V(x,0.40,z),0.072,0.088,bootMat));
+  root.add(ball(V(x,0.075,z+0.075),0.07,bootMat,1,0.62,1.5));
+  root.add(box(0.135,0.028,0.235,V(x,0.021,z+0.07),new THREE.MeshStandardMaterial({color:0x241813,roughness:0.75})));
+  for(const y of [0.20,0.31]){
+    const t=new THREE.Mesh(new THREE.TorusGeometry(0.077,0.009,6,18),darkMat);
+    t.rotation.x=Math.PI/2; t.position.set(x,y,z); t.scale.z=0.95;
+    root.add(t);
+  }
+  root.add(box(0.03,0.028,0.018,V(x+(x<0?-0.078:0.078),0.255,z+0.01),metalMat));
+  root.add(box(0.026,0.024,0.016,V(x+(x<0?-0.08:0.08),0.34,z+0.005),metalMat));
+}
+
+/* ============================ bate ============================ */
+const b0=V(-0.255,1.975,0.035);
+const b1=V(0.60,1.76,-0.42);
+const bdir=new THREE.Vector3().subVectors(b1,b0).normalize();
+const batQ=new THREE.Quaternion().setFromUnitVectors(V(0,0,1),bdir);
+
+root.add(bone(b0,b1,0.024,0.05,woodMat,16));
+root.add(bone(b0,b0.clone().addScaledVector(bdir,0.24),0.028,0.027,darkMat,12)); // grip
+root.add(ball(b0,0.033,metalMat));
+root.add(bone(b1.clone().addScaledVector(bdir,-0.02),b1.clone().addScaledVector(bdir,0.03),0.052,0.045,woodMat,16));
+
+// alambre de espino
+const wire=new THREE.Group();
+wire.position.copy(b0).addScaledVector(bdir,0.72);
+wire.quaternion.copy(batQ);
+{
+  const pts=[];
+  for(let i=0;i<=200;i++){
+    const t=i/200, ang=t*Math.PI*13;
+    pts.push(new THREE.Vector3(Math.cos(ang)*0.055, Math.sin(ang)*0.055, -0.20+0.40*t));
+  }
+  wire.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),220,0.0055,5,false),metalMat));
+  for(let i=0;i<10;i++){
+    const p=pts[Math.round(i*20)];
+    const sp=new THREE.Mesh(new THREE.ConeGeometry(0.008,0.03,4),metalMat);
+    sp.position.copy(p);
+    sp.rotation.z=Math.random()*Math.PI;
+    sp.rotation.x=Math.random()*Math.PI;
+    wire.add(sp);
+  }
+}
+root.add(wire);
+
+// dedos agarrando el bate
+for(let i=0;i<4;i++){
+  const p=b0.clone().addScaledVector(bdir,0.015+i*0.031);
+  const t=new THREE.Mesh(new THREE.TorusGeometry(0.031,0.0105,6,12),skinMat);
+  t.position.copy(p); t.quaternion.copy(batQ);
+  root.add(t);
+}
+root.add(bone(V(-0.29,1.945,0.06),V(-0.245,1.995,0.06),0.014,0.011,skinMat));
+
+/* ============================ sangre en el pecho ============================ */
+const drips=[
+  [-0.038,1.552,1.335,0.0065],[0.012,1.545,1.245,0.0055],[0.062,1.512,1.395,0.0045]
+];
+for(const [x,y0,y1,r] of drips){
+  root.add(bone(V(x,y0,0.112),V(x+0.004,y1,0.100),r,r*0.35,bloodMat));
+  root.add(ball(V(x+0.006,y1-0.012,0.104),0.010,bloodMat,0.7,1.3,0.5));
+}
+
+/* ============================ escena / preview ============================ */
+root.updateMatrixWorld(true);
+const bounds=new THREE.Box3().setFromObject(root);
+const size=bounds.getSize(new THREE.Vector3());
+const min=bounds.min;
+// pies a y=0 y cuerpo centrado
+root.position.set(0,-min.y,0);
+root.updateMatrixWorld(true);
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#101014');
+scene.add(root);
+scene.add(new THREE.HemisphereLight('#dfe4ff','#2a1c14',0.7));
+const d1=new THREE.DirectionalLight('#ffe0b0',1.8); d1.position.set(3,5,4); scene.add(d1);
+const d2=new THREE.DirectionalLight('#8fa8ff',0.5); d2.position.set(-4,3,-3); scene.add(d2);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const cam=new THREE.PerspectiveCamera(35,window.innerWidth/window.innerHeight,0.1,60);
+cam.position.set(2.6,1.9,3.6);
+cam.lookAt(0,1.0,0);
+renderer.render(scene,cam);
+window.__VIEW__={scene,renderer,cam,root};
+
+const tris=(()=>{let n=0; root.traverse(o=>{ if(o.isMesh&&o.geometry.index) n+=o.geometry.index.count/3; }); return Math.round(n);})();
+const meshes=(()=>{let n=0; root.traverse(o=>{ if(o.isMesh) n++; }); return n;})();
+const mats=new Set();
+root.traverse(o=>{ if(o.isMesh) mats.add(o.material); });
+log('mallas: '+meshes+'  triángulos: '+tris+'  materiales: '+mats.size);
+log('alto: '+size.y.toFixed(3)+' m  ancho: '+size.x.toFixed(3)+'  fondo: '+size.z.toFixed(3));
+window.__INFO__={meshes,tris,materials:mats.size,height:+size.y.toFixed(3),width:+size.x.toFixed(3),depth:+size.z.toFixed(3)};
+
+const exporter=new GLTFExporter();
+exporter.parse(root, buf=>{
+  log('GLB: '+(buf.byteLength/1048576).toFixed(2)+' MB');
+  fetch('/save?name=trickster.glb',{method:'POST',body:buf})
+    .then(r=>r.json())
+    .then(j=>{ log('GUARDADO '+JSON.stringify(j)); window.__DONE__=j; })
+    .catch(e=>{ log('ERROR guardando: '+e); window.__ERROR__=String(e); });
+}, err=>{ log('ERROR exportando: '+err); window.__ERROR__=String(err); },
+{ binary:true, onlyVisible:true });
+</script>
+</body></html>

@@ -1059,7 +1059,7 @@ window.__MUSEUM__={scene:scene,camera:camera,controls:controls,statues:statues,K
     console.warn('[museo] En file:// el navegador no puede leer archivos locales por su cuenta: ejecuta servir.bat, o carga el modelo con "Cargar .glb" o arrastrandolo.');
     return;
   }
-  fetch('models/manifest.json').then(function(r){ return r.ok?r.json():null; }).then(function(m){
+  fetch('models/manifest.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(m){
     if(!m||!m.killers) return;
     var n=0;
     Object.keys(m.killers).forEach(function(id){

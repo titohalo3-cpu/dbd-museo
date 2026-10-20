@@ -12,6 +12,7 @@ cargando un `.glb` real.
       js/app.js                   Motor 3D: sala, pedestales, figuras, carga de modelos
       js/library.js               Biblioteca: modelos en el navegador o desde una carpeta
       models/demogorgon.glb       Modelo real (Sketchfab) — ya integrado
+      models/trickster.glb        Modelo del Trickster (generado) — ya integrado
       models/manifest.json        Carga automática de modelos (con servidor local)
       models/README.txt           Convención de nombres e ids válidos
       source/                     Descarga original de Sketchfab (sin tocar)
@@ -29,7 +30,7 @@ cargando un `.glb` real.
      **añadir archivos**, que quedan guardados en el navegador (IndexedDB) y se
      cargan solos la próxima vez. No ocupan espacio en el proyecto.
    - **Automático**: ejecuta `servir.bat` y abre <http://localhost:8080>. El museo
-     lee `models/manifest.json` y carga el Demogorgon solo.
+     lee `models/manifest.json` y carga los modelos incluidos (Demogorgon y Trickster).
    - **A mano**: botón **Cargar .glb** (puedes seleccionar el `.glb` o el conjunto
      `.gltf` + `.bin` + texturas con `Ctrl+A`), botón **Cargar carpeta**, o
      arrastrando archivos/carpetas sobre la escena.
@@ -77,12 +78,14 @@ seleccionado en ese momento.
     {
       "killers": {
         "demogorgon": "models/demogorgon.glb",
+        "trickster":  "models/trickster.glb?v=2",
         "trapper":    "models/trapper.glb"
       }
     }
 
 Una URL por asesino. También se admite `{ "url": "models/trapper.glb" }` y una
-lista (se usa el primer elemento), por compatibilidad.
+lista (se usa el primer elemento), por compatibilidad. Si reemplazas un `.glb`
+manteniendo el nombre, sube el `?v=` de su URL para saltar la caché del navegador.
 
 ## Editar el museo
 
@@ -90,6 +93,8 @@ lista (se usa el primer elemento), por compatibilidad.
 - Estilo de la sala, luces y cámara: `js/app.js`.
 - La carga de modelos vive al final de `js/app.js` (`loadModels`, `loadModelUrl`).
 - La biblioteca (IndexedDB + carpetas vinculadas): `js/library.js`.
+- Regenerar el modelo del Trickster: `node tools/save-server.js`, abre
+  <http://localhost:8099/> y la página exporta `models/trickster.glb`.
 
 ## Subirlo a GitHub (sin los modelos)
 

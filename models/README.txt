@@ -6,6 +6,7 @@ Coloca aqui tus archivos .glb / .gltf con este nombre:
     <id-asesino>.glb
 
     demogorgon.glb            The Demogorgon        <- YA INCLUIDO
+    trickster.glb             The Trickster         <- YA INCLUIDO
     trapper.glb               The Trapper
     huntress.glb              The Huntress
 
@@ -20,6 +21,9 @@ COMO SE CARGAN
    guardados en el navegador y se cargan solos la proxima vez.
 2. Automatico: ejecuta servir.bat y abre http://localhost:8080
    El museo lee models/manifest.json y carga lo que haya apuntado ahi.
+   Si reemplazas un .glb conservando el nombre, sube el numero de la url en
+   manifest.json (por ejemplo trickster.glb?v=3) para que el navegador no
+   siga mostrando la version antigua en cache.
 3. Boton "Cargar carpeta" -> elige esta carpeta (o cualquier carpeta con tus .glb).
 4. Boton "Cargar .glb"    -> elige los archivos (con Ctrl+A puedes coger el .gltf
    junto con su .bin y sus texturas: el cargador las empareja por nombre).
