@@ -451,7 +451,7 @@ scene.background=new THREE.Color('#060608');
 scene.fog=new THREE.FogExp2('#060608',0.0115);
 
 const camera=new THREE.PerspectiveCamera(42,window.innerWidth/window.innerHeight,0.1,320);
-camera.position.set(0,3.0,startZ+11);
+camera.position.set(0,3.0,startZ+6.5);
 
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
@@ -462,6 +462,19 @@ controls.maxDistance=13;
 controls.minPolarAngle=0.45;
 controls.maxPolarAngle=1.53;
 controls.target.set(0,2.0,startZ);
+
+/* Limites del interior: la camara no puede atravesar muros, suelo ni techo. */
+const ROOM={
+  minX:-12.05,maxX:12.05,
+  minY:0.55,maxY:8.45,
+  minZ:-(startZ+7.65),maxZ:startZ+7.65
+};
+function clampCamera(){
+  const p=camera.position;
+  if(p.x<ROOM.minX)p.x=ROOM.minX; else if(p.x>ROOM.maxX)p.x=ROOM.maxX;
+  if(p.y<ROOM.minY)p.y=ROOM.minY; else if(p.y>ROOM.maxY)p.y=ROOM.maxY;
+  if(p.z<ROOM.minZ)p.z=ROOM.minZ; else if(p.z>ROOM.maxZ)p.z=ROOM.maxZ;
+}
 
 const pmrem=new THREE.PMREMGenerator(renderer);
 scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
@@ -522,18 +535,6 @@ for(let s=-1;s<=1;s+=2){
     scene.add(cap);
   }
 }
-
-const dustGeo=new THREE.BufferGeometry();
-const NDUST=900;
-const dustPos=new Float32Array(NDUST*3);
-for(let i=0;i<NDUST;i++){
-  dustPos[i*3]=(Math.random()-0.5)*22;
-  dustPos[i*3+1]=Math.random()*8;
-  dustPos[i*3+2]=(Math.random()-0.5)*hallLen;
-}
-dustGeo.setAttribute('position',new THREE.BufferAttribute(dustPos,3));
-const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:'#c8b48a',size:0.035,transparent:true,opacity:0.4,depthWrite:false,blending:THREE.AdditiveBlending}));
-scene.add(dust);
 
 const statues=[];
 const pivots=[];
@@ -1019,19 +1020,13 @@ function animate(){
     spot.target.position.set(s.x,1.9,s.z);
     spot.target.updateMatrixWorld();
   }
-  const dp=dust.geometry.attributes.position;
-  for(let i=0;i<dp.count;i++){
-    let y=dp.getY(i)+dt*0.06;
-    if(y>8.2) y=0;
-    dp.setY(i,y);
-  }
-  dp.needsUpdate=true;
   mixers.forEach(function(m){ m.update(dt); });
   controls.update();
+  clampCamera();
   renderer.render(scene,camera);
 }
 animate();
-window.__MUSEUM__={scene:scene,camera:camera,controls:controls,statues:statues,KILLERS:KILLERS,focus:focusKiller,mixers:mixers,loadFiles:loadFiles,debug:{match:matchKillerSmart,idle:pickIdle},who:function(){return selected;}};
+window.__MUSEUM__={scene:scene,camera:camera,controls:controls,statues:statues,KILLERS:KILLERS,focus:focusKiller,mixers:mixers,loadFiles:loadFiles,clamp:clampCamera,debug:{match:matchKillerSmart,idle:pickIdle},who:function(){return selected;}};
 (function(){var l=document.getElementById('loading');if(l)l.classList.add('gone');window.__READY__=true;setInterval(function(){if(document.hidden)animate();},100);})();
 
 /* ==========================================================================
