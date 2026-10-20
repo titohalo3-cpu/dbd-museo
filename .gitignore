@@ -1,0 +1,34 @@
+# ============================================================
+#  Modelos 3D y material pesado: NO se suben a GitHub.
+#  Se quedan en tu disco y el museo los lee con la Biblioteca
+#  (carpeta vinculada o IndexedDB).
+# ============================================================
+*.glb
+*.gltf
+*.bin
+*.fbx
+*.obj
+*.blend
+*.usdz
+*.zip
+*.7z
+*.rar
+
+source/
+textures/
+models/textures/
+models/**/textures/
+
+# Lo que SI se sube de models/: manifest.json y README.txt
+
+# ============================================================
+#  Sistema / editor
+# ============================================================
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Servidor local / logs
+*.log

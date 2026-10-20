@@ -1,0 +1,6 @@
+{
+  "_ayuda": "Modelo base que se carga solo al abrir el museo servido por http (servir.bat). La ruta es relativa a index.html. Formato: id-asesino -> url del .glb. Un unico modelo por asesino.",
+  "killers": {
+    "demogorgon": "models/demogorgon.glb"
+  }
+}
