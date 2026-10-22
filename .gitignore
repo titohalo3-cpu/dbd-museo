@@ -1,7 +1,7 @@
 # ============================================================
-#  Modelos 3D y material pesado: NO se suben a GitHub.
-#  Se quedan en tu disco y el museo los lee con la Biblioteca
-#  (carpeta vinculada o IndexedDB).
+#  Modelos 3D y material pesado: NO se suben a GitHub, salvo los
+#  .glb optimizados de models/ (WebP + meshopt, ~39 MB), que el
+#  museo carga desde models/manifest.json.
 # ============================================================
 *.glb
 *.gltf
@@ -19,7 +19,8 @@ textures/
 models/textures/
 models/**/textures/
 
-# Lo que SI se sube de models/: manifest.json y README.txt
+# Lo que SI se sube de models/: los .glb optimizados, manifest.json y README.txt
+!models/*.glb
 
 # ============================================================
 #  Sistema / editor

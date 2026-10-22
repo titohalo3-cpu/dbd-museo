@@ -1,18 +1,26 @@
 # El Museo de los Asesinos — proyecto Dead by Daylight 3D
 
-Galería interactiva con 39 asesinos, un único **modelo base** por asesino, hecha con Three.js.
-Cada figura se puede girar (arrastrar) y acercar (rueda); el modelo base se sustituye
-cargando un `.glb` real.
+Galería 3D por la que se camina, hecha con Three.js: un pasillo con 41 asesinos sobre
+pedestales, cada uno con su foco y su placa. Los 13 que tienen modelo del juego
+aparecen con su figura real; el resto, como estatua generada por código.
+
+## Cómo moverse
+
+- **Mirar**: arrastra (o desliza en el móvil).
+- **Caminar**: clic/toque en el suelo, **WASD** o flechas (Mayús para correr), o la rueda.
+- **Ver de cerca**: clic en una figura. Arrastra para girarla, rueda para acercarte,
+  **Esc** o «Volver a pasear» para salir. «Anterior / Siguiente» recorre la sala.
+- **Índice**: lista de asesinos; al elegir uno, caminas hasta él.
 
 ## Estructura
 
     dbd-museo/
       index.html                  Página del museo
-      js/data.js                  Los 39 asesinos: id, capítulo, arma, colores y aspecto
+      js/data.js                  Los 41 asesinos: id, capítulo, arma, colores y aspecto
       js/app.js                   Motor 3D: sala, pedestales, figuras, carga de modelos
       js/library.js               Biblioteca: modelos en el navegador o desde una carpeta
-      models/demogorgon.glb       Modelo real (Sketchfab) — ya integrado
-      models/trickster.glb        Modelo del Trickster (generado) — ya integrado
+      models/<id>.glb             13 modelos optimizados (WebP + meshopt, ~39 MB en total)
+      tools/optimizar-modelos.mjs Regenera models/ a partir de los originales de source/
       models/manifest.json        Carga automática de modelos (con servidor local)
       models/README.txt           Convención de nombres e ids válidos
       source/                     Descarga original de Sketchfab (sin tocar)
@@ -99,38 +107,36 @@ manteniendo el nombre, sube el `?v=` de su URL para saltar la caché del navegad
 - Regenerar el modelo del Trickster: `node tools/save-server.js`, abre
   <http://localhost:8099/> y la página exporta `models/trickster.glb`.
 
-## Subirlo a GitHub (sin los modelos)
+## Subirlo a GitHub (con los modelos optimizados)
 
-El repositorio lleva solo el código. El `.gitignore` excluye `*.glb`, `*.gltf`,
-`*.bin`, `source/`, `textures/` y los `.zip`; de `models/` solo se suben
-`manifest.json` y `README.txt`, que son texto.
+El repositorio lleva el código y los 13 `.glb` optimizados de `models/` (~39 MB;
+el mayor pesa ~7 MB, muy por debajo del límite de 100 MB de GitHub). El
+`.gitignore` sigue excluyendo `source/` (originales, ~600 MB), `textures/`, los
+`.gltf`/`.bin` y los `.zip`.
 
 ```bash
-git init -b main
 git add -A
-git commit -m "Museo DBD 3D"
-git remote add origin https://github.com/TU-USUARIO/dbd-museo.git
+git commit -m "Museo caminable con 13 modelos optimizados"
+git remote add origin https://github.com/titohalo3-cpu/dbd-museo.git
 git push -u origin main
 ```
 
-Crea antes el repositorio vacío en GitHub (sin README ni licencia). Si te pide
-contraseña, usa un token personal (Settings → Developer settings → Personal access
-tokens) o GitHub Desktop.
+Crea antes el repositorio vacío en GitHub (sin README ni licencia). Git Credential
+Manager se encarga del inicio de sesión.
 
 ### Publicarlo con GitHub Pages
 
 Settings → Pages → Source: `Deploy from a branch` → `main` / `/ (root)`.
-Quedará en `https://TU-USUARIO.github.io/dbd-museo/`.
+Quedará en `https://titohalo3-cpu.github.io/dbd-museo/`. Todas las rutas son
+relativas, así que funciona bajo `/dbd-museo/` sin cambios: el museo lee
+`models/manifest.json` y carga los modelos solos.
 
-Los modelos no viajan con el repositorio: quien entre verá las estatuas
-procedurales y podrá añadir los suyos con **Biblioteca** (por https también
-funciona "Vincular carpeta"). Si algún día quieres publicar un modelo concreto,
-adjúntalo a un *Release* en vez de al código (GitHub rechaza archivos de más de
-100 MB).
+Si cambias un `.glb` conservando el nombre, sube el `?v=` de su URL en el manifest
+para que los navegadores no sigan usando la versión en caché.
 
 ## Aviso legal
 
 Los personajes y sus modelos originales pertenecen a Behaviour Interactive y a sus
-respectivos licenciantes. Este proyecto no incluye ninguna malla del juego: solo la
-reconstrucción volumétrica generada por código y el cargador para tus propios
-archivos (el Demogorgon incluido es una descarga de Sketchfab).
+respectivos licenciantes. Los `.glb` de `models/` son versiones optimizadas de
+descargas de Sketchfab: antes de publicarlos, revisa la licencia de cada descarga.
+Proyecto de fans sin ánimo de lucro.

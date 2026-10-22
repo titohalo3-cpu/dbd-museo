@@ -1,7 +1,40 @@
 {
-  "_ayuda": "Modelo base que se carga solo al abrir el museo servido por http (servir.bat). La ruta es relativa a index.html. Formato: id-asesino -> url del .glb. Un unico modelo por asesino.",
+  "_ayuda": "Modelos que se cargan solos al abrir el museo servido por http (servir.bat). La ruta es relativa a index.html. Formato: id-asesino (campo id de js/data.js) -> url del .glb. Los .glb estan optimizados (WebP + meshopt) desde los originales de source/. Tambien admite un objeto {url, rot (grados), h (altura en metros), hide (mallas a ocultar)} para girar, escalar o quitar piezas sueltas.",
   "killers": {
-    "demogorgon": "models/demogorgon.glb",
-    "trickster": "models/trickster.glb?v=2"
+    "shape": "models/shape.glb?v=3",
+    "cannibal": "models/cannibal.glb?v=3",
+    "nightmare": "models/nightmare.glb?v=3",
+    "ghost-face": "models/ghostface.glb?v=3",
+    "demogorgon": "models/demogorgon.glb?v=3",
+    "trickster": "models/trickster.glb?v=2",
+    "knight": "models/knight.glb?v=3",
+    "singularity": "models/singularity.glb?v=3",
+    "good-guy": {
+      "url": "models/goodguy.glb?v=3",
+      "rot": 180,
+      "h": 0.95
+    },
+    "unknown": {
+      "url": "models/unknown.glb?v=3",
+      "hide": [
+        "Object_155",
+        "Object_116",
+        "Object_161"
+      ]
+    },
+    "ghoul": {
+      "url": "models/ghoul.glb?v=3",
+      "hide": [
+        "Object_125"
+      ]
+    },
+    "animatronic": "models/animatronic.glb?v=3",
+    "slasher": {
+      "url": "models/slasher.glb?v=3",
+      "hide": [
+        "Object_18",
+        "SM_K43_Hook_01001_MI_K43_Hook_01_0"
+      ]
+    }
   }
 }
