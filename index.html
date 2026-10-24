@@ -49,6 +49,8 @@ body:not(.inspecting) canvas{cursor:crosshair}
 .eyebrow #pNum{color:#615f5b;letter-spacing:.14em}
 #pName{font-family:'Cinzel',Georgia,serif;font-weight:600;font-size:31px;line-height:1.05;margin:9px 0 3px;letter-spacing:.015em}
 #pAlias{font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+#pQuote{margin-top:12px;padding-left:12px;border-left:2px solid var(--blood);font-family:'Cinzel',Georgia,serif;font-size:14px;line-height:1.45;color:#d9d4c8;letter-spacing:.01em}
+#pQuote:empty{display:none}
 .statline{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:10.5px;color:#b9b6b0;letter-spacing:.04em}
 .statline .sep{width:3px;height:3px;background:var(--blood);border-radius:50%}
 .modelrow{display:flex;align-items:center;gap:9px;margin-top:17px;padding:12px 0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07)}
@@ -99,6 +101,7 @@ body.inspecting #hint{opacity:0}
  .phint{display:none}
  #panel{left:12px;right:12px;width:auto;bottom:12px;padding:15px 16px}
  #pName{font-size:24px}
+ #pQuote{font-size:12.5px;margin-top:9px}
  #topbar{top:12px;right:12px;gap:6px}
  .tbtn{padding:9px 10px;font-size:8.5px}
  #hint{right:auto;left:50%;transform:translateX(-50%);bottom:16px;width:max-content;max-width:calc(100vw - 32px);text-align:center;font-size:8px;line-height:1.8}
@@ -128,6 +131,7 @@ body.inspecting #hint{opacity:0}
   <div class="eyebrow"><span id="pChapter">Original · 2016</span><span id="pNum">03 / 39</span></div>
   <h2 id="pName">The Hillbilly</h2>
   <div id="pAlias">Max Thompson Jr.</div>
+  <p id="pQuote"></p>
   <div class="statline"><span id="pWeapon">Motosierra</span><span class="sep"></span><span id="pVariants">Modelo base</span></div>
   <div class="modelrow"><span class="modelDot"></span><span class="skinName" id="modelState">Estatua procedural</span></div>
   <div class="pnav"><button class="tbtn" id="prevBtn" aria-label="Asesino anterior">‹ Anterior</button><button class="tbtn" id="backBtn">Volver a pasear</button><button class="tbtn" id="nextBtn" aria-label="Asesino siguiente">Siguiente ›</button></div>
@@ -142,10 +146,10 @@ body.inspecting #hint{opacity:0}
   <div class="introInner">
     <div class="introKicker">Una noche en el museo</div>
     <h2>El Museo de<br>los <span>Asesinos</span></h2>
-    <div class="introSub">41 asesinos · una sola sala · camina entre ellos</div>
+    <div class="introSub">42 asesinos · una sola sala · camina entre ellos</div>
     <button class="enter" id="enterBtn">Entrar a la galería</button>
-    <div class="introNote">Recorre la galería a pie: arrastra para mirar alrededor, haz clic en el suelo (o usa WASD) para caminar y pulsa sobre cualquier asesino para contemplarlo de cerca y girarlo sobre su pedestal. Los que tienen modelo del juego aparecen con su figura real; el resto, como estatua.</div>
+    <div class="introNote">Recorre la galería a pie: arrastra para mirar alrededor, haz clic en el suelo (o usa WASD) para caminar y pulsa sobre cualquier asesino para contemplarlo de cerca y girarlo sobre su pedestal. Los que aún no tienen modelo 3D esperan tras un cartel de «Work In Progress».</div>
   </div>
 </div>
 
-<script src="js/data.js?v=12"></script><script type="module" src="js/app.js?v=16"></script></body></html>
+<script src="js/data.js?v=13"></script><script type="module" src="js/app.js?v=23"></script></body></html>

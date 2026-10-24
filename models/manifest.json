@@ -6,9 +6,22 @@
     "nightmare": "models/nightmare.glb?v=3",
     "ghost-face": "models/ghostface.glb?v=3",
     "demogorgon": "models/demogorgon.glb?v=3",
+    "wraith": "models/wraith.glb?v=1",
     "trickster": "models/trickster.glb?v=2",
-    "knight": "models/knight.glb?v=3",
-    "singularity": "models/singularity.glb?v=3",
+    "knight": {
+      "url": "models/knight.glb?v=3",
+      "hide": [
+        "Object_75"
+      ]
+    },
+    "singularity": {
+      "url": "models/singularity.glb?v=3",
+      "hide": [
+        "Object_91",
+        "Object_92",
+        "Object_93"
+      ]
+    },
     "good-guy": {
       "url": "models/goodguy.glb?v=3",
       "rot": 180,

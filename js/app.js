@@ -468,6 +468,82 @@ if(document.fonts&&document.fonts.ready){
   });
 }
 
+/* Cartel «Work In Progress» para los asesinos que aún no tienen modelo 3D:
+   pizarra sobre caballete, con franjas de obra y un cono a sus pies. */
+const wipBoards=[];
+function drawWip(c,k){
+  const x=c.getContext('2d'),W=c.width,H=c.height;
+  x.fillStyle='#141316'; x.fillRect(0,0,W,H);
+  x.save();
+  x.beginPath(); x.rect(0,0,W,58); x.rect(0,H-58,W,58); x.clip();
+  for(let s=-H;s<W+H;s+=44){
+    x.fillStyle='#e2a72e';
+    x.beginPath(); x.moveTo(s,0); x.lineTo(s+22,0); x.lineTo(s+22-H,H); x.lineTo(s-H,H); x.closePath(); x.fill();
+  }
+  x.restore();
+  x.strokeStyle='rgba(226,167,46,.55)'; x.lineWidth=3; x.strokeRect(22,80,W-44,H-160);
+  x.textAlign='center';
+  x.fillStyle='#e2a72e';
+  x.font='600 20px Inter, sans-serif';
+  x.fillText('EN OBRAS',W/2,140);
+  x.fillStyle='#efe9dc';
+  x.font='700 64px Cinzel, Georgia, serif';
+  x.fillText('WORK IN',W/2,250);
+  x.fillText('PROGRESS',W/2,326);
+  x.fillStyle='#e2a72e'; x.fillRect(W/2-60,360,120,3);
+  let fs=34; const name=k.n.toUpperCase();
+  x.font='600 '+fs+'px Cinzel, Georgia, serif';
+  while(x.measureText(name).width>W-90&&fs>18){ fs-=2; x.font='600 '+fs+'px Cinzel, Georgia, serif'; }
+  x.fillStyle='#efe9dc';
+  x.fillText(name,W/2,420);
+  x.fillStyle='#8d8a85';
+  x.font='500 18px Inter, sans-serif';
+  x.fillText('MODELO 3D EN CAMINO',W/2,470);
+}
+const matWipFrame=std('#2a2622',0.6,0.35);
+const matConeOrange=std('#e0661f',0.55,0.0);
+const matConeWhite=std('#eeeae0',0.5,0.0);
+function buildWipSign(k){
+  const g=new THREE.Group();
+  const c=document.createElement('canvas');
+  c.width=512; c.height=640;
+  drawWip(c,k);
+  const t=new THREE.CanvasTexture(c);
+  t.colorSpace=THREE.SRGBColorSpace;
+  t.anisotropy=8;
+  wipBoards.push({c:c,k:k,t:t});
+  const face=new THREE.MeshStandardMaterial({map:t,roughness:0.85,metalness:0});
+  const board=new THREE.Mesh(new THREE.BoxGeometry(1.04,1.3,0.04),[matWipFrame,matWipFrame,matWipFrame,matWipFrame,face,matWipFrame]);
+  board.position.set(0,1.2,0.05);
+  board.rotation.x=-0.1;
+  g.add(board);
+  for(let s=-1;s<=1;s+=2){
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,1.9,8),matWipFrame);
+    leg.position.set(s*0.42,0.92,-0.02);
+    leg.rotation.x=-0.1;
+    g.add(leg);
+  }
+  const back=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,1.75,8),matWipFrame);
+  back.position.set(0,0.82,-0.3);
+  back.rotation.x=0.32;
+  g.add(back);
+  const cone=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.ConeGeometry(0.15,0.42,20),matConeOrange);
+  body.position.y=0.23; cone.add(body);
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(0.085,0.105,0.07,20),matConeWhite);
+  band.position.y=0.26; cone.add(band);
+  const foot=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.03,0.34),matConeOrange);
+  foot.position.y=0.015; cone.add(foot);
+  cone.position.set(0.5,0,0.38);
+  g.add(cone);
+  return g;
+}
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(function(){
+    wipBoards.forEach(function(p){ drawWip(p.c,p.k); p.t.needsUpdate=true; });
+  });
+}
+
 const matPlinth=std('#cbbd9b',0.74,0.0);
 const matPlinthDark=std('#17140f',0.55,0.25);
 function buildPedestal(k,row){
@@ -688,8 +764,11 @@ function renderStatue(i){
   }
   let obj;
   if(src) obj=cloneModel(src);
-  else obj=buildStatue(k,0);
+  else obj=buildWipSign(k);
   pivot.add(obj);
+  pivot.scale.set(1,1,1);
+  st.breath=null;
+  st.waitIdle=false;
   st.renderedKind=src?'glb':'proc';
   if(src && src.userData && src.userData.clips && src.userData.clips.length){
     const mixer=new THREE.AnimationMixer(obj);
@@ -697,10 +776,122 @@ function renderStatue(i){
     const act=mixer.clipAction(src.userData.clips[ci]);
     act.play();
     mixers.set(i,mixer);
+    /* El reposo de Springtrap sirve de molde para los demás asesinos del juego. */
+    if(k.id==='animatronic'&&!IDLE_SRC){
+      IDLE_SRC={clip:src.userData.clips[ci],rest:restPose(src)};
+      statues.forEach(function(s,j){ if(s.waitIdle) renderStatue(j); });
+    }
+  } else if(src){
+    giveIdle(i,obj);
   }
   const item=document.getElementById('roster');
   if(item&&item.children[i]) item.children[i].classList.toggle('real',!!src);
   updateCount();
+}
+/* ==========================================================================
+   Reposo para los modelos que no traen animación.
+   - Esqueleto del juego (huesos joint_*): se traslada el idle de Springtrap
+     como diferencia sobre su pose de reposo, sin tocar piernas ni pelvis
+     para que los pies sigan apoyados.
+   - Otros esqueletos o sin huesos: brazos bajados si están en cruz, más
+     respiración, balanceo suave y giro lento de la cabeza.
+   ========================================================================== */
+const DBD_BONE=/^(joint_(?:[A-Za-z0-9]+_)+?\d{2})(?=_|$)/;
+const LEG_BONE=/Pelvis|Hip|Knee|Ankle|Foot|Toe|Leg|Thigh|Calf|Root/i;
+let IDLE_SRC=null;
+function boneBase(name){ const m=DBD_BONE.exec(name); return m?m[1]:null; }
+function restPose(model){
+  const m=new Map();
+  model.traverse(function(n){ if(n.isBone) m.set(n.name,n.quaternion.clone()); });
+  return m;
+}
+function isGameRig(model){
+  let found=false;
+  model.traverse(function(n){ if(!found&&n.isBone&&boneBase(n.name)==='joint_Pelvis_01') found=true; });
+  return found;
+}
+function retargetIdle(model){
+  const tgt=new Map();
+  model.traverse(function(n){ if(n.isBone){ const b=boneBase(n.name); if(b&&!tgt.has(b)) tgt.set(b,n); } });
+  const qa=new THREE.Quaternion(),qr=new THREE.Quaternion(),qt=new THREE.Quaternion();
+  const tracks=[];
+  IDLE_SRC.clip.tracks.forEach(function(t){
+    if(!t.name.endsWith('.quaternion')) return;
+    const sn=t.name.slice(0,-11),b=boneBase(sn);
+    if(!b||LEG_BONE.test(b)||!tgt.has(b)||!IDLE_SRC.rest.has(sn)) return;
+    const bone=tgt.get(b);
+    qr.copy(IDLE_SRC.rest.get(sn)).invert();
+    const v=new Float32Array(t.values.length);
+    for(let j=0;j<v.length;j+=4){
+      qa.fromArray(t.values,j);
+      qt.copy(qr).multiply(qa).premultiply(bone.quaternion).toArray(v,j);
+    }
+    tracks.push(new THREE.QuaternionKeyframeTrack(bone.name+'.quaternion',t.times,v));
+  });
+  return tracks.length?new THREE.AnimationClip('Idle Springtrap',IDLE_SRC.clip.duration,tracks):null;
+}
+const NOT_MAIN=/twist|corrective|roll|_out|fwd|_in_|bck|pec|scap|lip|cheek|mouth|eye|jaw|brow|nose|tendril|ACC|(^|_)ear(_|$)/i;
+/* Baja los brazos en cruz girando cada brazo hacia abajo en el espacio del mundo. */
+function relaxArms(obj){
+  const arms=[];
+  obj.traverse(function(n){
+    if(n.isBone&&/upper_?arm|arm_(left|right)_shoulder_2|(left|right)arm$/i.test(n.name)&&!NOT_MAIN.test(n.name)) arms.push(n);
+  });
+  const a=new THREE.Vector3(),b=new THREE.Vector3(),pw=new THREE.Quaternion(),qw=new THREE.Quaternion();
+  arms.forEach(function(bone){
+    const kids=bone.children.filter(function(c){ return c.isBone&&!NOT_MAIN.test(c.name); });
+    const child=kids.find(function(c){ return /fore|elbow|lowerarm/i.test(c.name); })||kids[0];
+    if(!child) return;
+    obj.updateMatrixWorld(true);
+    bone.getWorldPosition(a); child.getWorldPosition(b);
+    const d=b.sub(a).normalize();
+    if(d.y<-0.75) return;
+    const out=new THREE.Vector3(d.x,0,d.z).normalize().multiplyScalar(0.3);
+    const target=out.add(new THREE.Vector3(0,-1,0)).normalize();
+    qw.setFromUnitVectors(d,target);
+    bone.parent.getWorldQuaternion(pw);
+    bone.quaternion.premultiply(pw.clone().invert().multiply(qw).multiply(pw));
+  });
+  obj.updateMatrixWorld(true);
+}
+function findHead(obj){
+  let head=null;
+  obj.traverse(function(n){
+    if(n.isBone&&/head/i.test(n.name)&&!NOT_MAIN.test(n.name)&&(!head||n.name.length<head.name.length)) head=n;
+  });
+  if(!head||!head.parent) return null;
+  const pw=new THREE.Quaternion();
+  obj.updateMatrixWorld(true);
+  head.parent.getWorldQuaternion(pw);
+  return {bone:head,rest:head.quaternion.clone(),axis:new THREE.Vector3(0,1,0).applyQuaternion(pw.invert())};
+}
+function giveIdle(i,obj){
+  const src=KILLERS[i].model,st=statues[i];
+  if(isGameRig(src)){
+    if(!IDLE_SRC){ st.waitIdle=true; return; }
+    if(src.userData.retClip===undefined) src.userData.retClip=retargetIdle(src);
+    const clip=src.userData.retClip;
+    if(clip){
+      const mixer=new THREE.AnimationMixer(obj);
+      const act=mixer.clipAction(clip);
+      act.time=Math.random()*clip.duration;
+      act.play();
+      mixers.set(i,mixer);
+      return;
+    }
+  }
+  relaxArms(obj);
+  st.breath={ph:Math.random()*6.28,head:findHead(obj)};
+}
+const qHead=new THREE.Quaternion();
+function breathe(st,t){
+  const b=st.breath,p=t+b.ph;
+  st.pivot.scale.y=1+0.007*Math.sin(p*1.7);
+  st.pivot.rotation.y+=0.03*Math.sin(p*0.4);
+  if(b.head){
+    qHead.setFromAxisAngle(b.head.axis,0.16*Math.sin(p*0.45));
+    b.head.bone.quaternion.copy(qHead).multiply(b.head.rest);
+  }
 }
 function updateCount(){
   const el=document.getElementById('footCount');
@@ -725,23 +916,18 @@ function measureBox(obj){
   let any=false;
   obj.traverse(function(n){
     if(!n.isMesh||!n.visible) return;
-    if(n.isSkinnedMesh&&n.geometry&&n.geometry.attributes&&n.geometry.attributes.position&&n.applyBoneTransform){
-      const pos=n.geometry.attributes.position;
-      const step=Math.max(1,Math.floor(pos.count/2500));
-      for(let i=0;i<pos.count;i+=step){
-        v.fromBufferAttribute(pos,i);
-        n.applyBoneTransform(i,v);
-        v.applyMatrix4(n.matrixWorld);
-        box.expandByPoint(v);
-      }
-      any=true;
-      return;
+    /* Vértice a vértice (con huesos si los hay): la caja del glTF es aproximada
+       en modelos cuantizados y dejaba la figura unos centímetros en el aire. */
+    const pos=n.geometry&&n.geometry.attributes&&n.geometry.attributes.position;
+    if(!pos) return;
+    const skin=n.isSkinnedMesh&&n.applyBoneTransform;
+    for(let i=0;i<pos.count;i++){
+      v.fromBufferAttribute(pos,i);
+      if(skin) n.applyBoneTransform(i,v);
+      v.applyMatrix4(n.matrixWorld);
+      box.expandByPoint(v);
     }
-    if(n.geometry){
-      if(!n.geometry.boundingBox) n.geometry.computeBoundingBox();
-      box.union(n.geometry.boundingBox.clone().applyMatrix4(n.matrixWorld));
-      any=true;
-    }
+    any=true;
   });
   if(!any) box.setFromObject(obj);
   return box;
@@ -807,11 +993,12 @@ function updatePanel(i){
   const k=KILLERS[i];
   document.getElementById('pName').textContent=k.n;
   document.getElementById('pAlias').textContent=k.a;
+  document.getElementById('pQuote').textContent=k.q?'«'+k.q+'»':'';
   document.getElementById('pChapter').textContent=k.c+' · '+k.y;
   document.getElementById('pNum').textContent=String(i+1).padStart(2,'0')+' / '+KILLERS.length;
   document.getElementById('pWeapon').textContent=k.w;
-  document.getElementById('pVariants').textContent=k.model?'Modelo 3D':'Estatua';
-  document.getElementById('modelState').textContent=k.model?'Modelo 3D del juego':'Estatua procedural · sin modelo todavía';
+  document.getElementById('pVariants').textContent=k.model?'Modelo 3D':'En preparación';
+  document.getElementById('modelState').textContent=k.model?'Modelo 3D del juego':'Work in progress · modelo 3D en camino';
   document.getElementById('modelState').parentNode.classList.toggle('hasReal',!!k.model);
 }
 function markActive(i){
@@ -878,7 +1065,17 @@ function focusKiller(i,instant){
   ensureRendered(i);
   exitInspect();
   const vp=viewPoint(i,1.35+figH(i)*0.95);
-  if(instant){ player.x=vp.x; player.z=vp.z; walk=null; startInspect(i); return; }
+  if(instant){
+    /* Salto directo (índice): ya colocado y mirando a la figura, sin caminar. */
+    const st=statues[i];
+    player.x=vp.x; player.z=vp.z; player.y=PED_H+0.25+figH(i)*0.4;
+    player.vx=player.vz=0; walk=null;
+    const a=lookAngles(player.x,player.y,player.z,st.x,lookY(i),st.z);
+    const wide=camera.aspect>1.15;
+    player.yaw=a.yaw+(wide?0.2:0); player.pitch=a.pitch+(wide?0:-0.2);
+    startInspect(i);
+    return;
+  }
   const st=statues[i];
   walk={x:vp.x,z:vp.z,look:{x:st.x,y:lookY(i),z:st.z},then:function(){startInspect(i);},left:14};
   markActive(i);
@@ -948,7 +1145,7 @@ function updatePlayer(dt){
   player.y+=(EYE-player.y)*(1-Math.exp(-dt*5));
 }
 
-/* Marcador del suelo y etiqueta que sigue al cursor ("Caminar aquí"). */
+/* Marcador del suelo y etiqueta que sigue al cursor (solo sobre las figuras). */
 const marker=new THREE.Mesh(new THREE.RingGeometry(0.2,0.25,48),new THREE.MeshBasicMaterial({color:'#e2c36b',transparent:true,opacity:0,depthWrite:false}));
 marker.rotation.x=-Math.PI/2;
 scene.add(marker);
@@ -1039,7 +1236,7 @@ function updateHover(){
     if(!walk||walk.look) marker.material.opacity=0;
   } else if(p&&p.type==='floor'&&p.d<40){
     canvas.style.cursor='';
-    setTag(inspect?'Volver a pasear':'Caminar aquí',hover.x,hover.y);
+    setTag(null);
     marker.position.set(p.p.x,0.015,p.p.z);
     marker.material.opacity=0.9;
   } else {
@@ -1063,7 +1260,7 @@ window.addEventListener('blur',function(){ keys.clear(); });
 roster.addEventListener('click',function(e){
   const el=e.target.closest?e.target.closest('.k'):null;
   if(!el) return;
-  focusKiller(parseInt(el.dataset.i,10),false);
+  focusKiller(parseInt(el.dataset.i,10),true);
   document.getElementById('sidebar').classList.remove('open');
 });
 document.getElementById('search').addEventListener('input',function(){
@@ -1367,6 +1564,10 @@ function updateStatues(dt){
       if(Math.abs(st.spin)<1e-3) st.spin=0;
     }
     st.pivot.rotation.y=st.base+st.spin;
+    if(st.breath){
+      const dx=st.x-player.x,dz=st.z-player.z;
+      if(dx*dx+dz*dz<900) breathe(st,clock.elapsedTime);
+    }
   }
   mixers.forEach(function(m,i){
     const s=statues[i],dx=s.x-player.x,dz=s.z-player.z;
