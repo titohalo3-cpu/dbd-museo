@@ -797,7 +797,9 @@ function renderStatue(i){
      respiración, balanceo suave y giro lento de la cabeza.
    ========================================================================== */
 const DBD_BONE=/^(joint_(?:[A-Za-z0-9]+_)+?\d{2})(?=_|$)/;
-const LEG_BONE=/Pelvis|Hip|Knee|Ankle|Foot|Toe|Leg|Thigh|Calf|Root/i;
+/* Piernas y brazos no se copian: los pies siguen en la base y los brazos se
+   bajan aparte con relaxArms, porque el reposo de Springtrap los deja en cruz. */
+const LEG_BONE=/Pelvis|Hip|Knee|Ankle|Foot|Toe|Leg|Thigh|Calf|Root|Clavicle|Shoulder|Elbow|ForArm|Wrist|Hand|Finger|Thumb/i;
 let IDLE_SRC=null;
 function boneBase(name){ const m=DBD_BONE.exec(name); return m?m[1]:null; }
 function restPose(model){
@@ -835,7 +837,7 @@ const NOT_MAIN=/twist|corrective|roll|_out|fwd|_in_|bck|pec|scap|lip|cheek|mouth
 function relaxArms(obj){
   const arms=[];
   obj.traverse(function(n){
-    if(n.isBone&&/upper_?arm|arm_(left|right)_shoulder_2|(left|right)arm$/i.test(n.name)&&!NOT_MAIN.test(n.name)) arms.push(n);
+    if(n.isBone&&/upper_?arm|arm_(left|right)_shoulder_2|(left|right)arm$|^joint_Shoulder(LT|RT)_01/i.test(n.name)&&!NOT_MAIN.test(n.name)) arms.push(n);
   });
   const a=new THREE.Vector3(),b=new THREE.Vector3(),pw=new THREE.Quaternion(),qw=new THREE.Quaternion();
   arms.forEach(function(bone){
@@ -872,6 +874,7 @@ function giveIdle(i,obj){
     if(src.userData.retClip===undefined) src.userData.retClip=retargetIdle(src);
     const clip=src.userData.retClip;
     if(clip){
+      relaxArms(obj);
       const mixer=new THREE.AnimationMixer(obj);
       const act=mixer.clipAction(clip);
       act.time=Math.random()*clip.duration;
@@ -967,7 +970,89 @@ function normalizeModel(obj,opts){
   obj.position.z-=c.z;
   obj.position.y-=box.min.y;
   obj.userData.h=opts.h||2.05;
+  if(opts.armsDown) lowerArmsMesh(obj,obj.userData.h,opts.armsDown);
   return obj;
+}
+/* Modelos en cruz sin huesos de brazo (Jason): se doblan los vértices de cada
+   brazo hacia abajo alrededor del hombro, con una transición suave en la axila.
+   Se hace una vez sobre la plantilla, en el espacio del modelo (pies en y=0).
+   deg: ángulo final del brazo bajo la horizontal. */
+function lowerArmsMesh(obj,h,deg){
+  obj.updateMatrixWorld(true);
+  const meshes=[];
+  obj.traverse(function(n){ if(n.isMesh&&n.visible&&!n.isSkinnedMesh&&n.geometry.attributes.position) meshes.push(n); });
+  const v=new THREE.Vector3();
+  /* Eje lateral: el horizontal con más anchura a la altura de los brazos. */
+  let ex=0,ez=0;
+  const arm=[];
+  meshes.forEach(function(n){
+    const pos=n.geometry.attributes.position;
+    for(let i=0;i<pos.count;i+=7){
+      v.fromBufferAttribute(pos,i).applyMatrix4(n.matrixWorld);
+      if(v.y>h*0.6&&v.y<h*0.92){ ex=Math.max(ex,Math.abs(v.x)); ez=Math.max(ez,Math.abs(v.z)); }
+      arm.push(v.x,v.y,v.z);
+    }
+  });
+  const lx=ex>=ez;
+  /* Perfil por franjas de distancia al centro: donde la franja deja de ser alta
+     (tronco) empieza el brazo; su línea central da el hombro y la inclinación. */
+  const bw=h*0.025,bins=[];
+  for(let i=0;i<arm.length;i+=3){
+    if(arm[i+1]<h*0.35) continue;
+    const b=Math.floor(Math.abs(lx?arm[i]:arm[i+2])/bw);
+    const r=bins[b]||(bins[b]=[1e9,-1e9]);
+    r[0]=Math.min(r[0],arm[i+1]); r[1]=Math.max(r[1],arm[i+1]);
+  }
+  let start=-1;
+  for(let b=Math.ceil(h*0.08/bw);b<bins.length;b++){ if(bins[b]&&bins[b][1]-bins[b][0]<h*0.3){ start=b; break; } }
+  if(start<0) return;
+  let sx=0,sy=0,sxx=0,sxy=0,cnt=0,halfT=0;
+  for(let b=start;b<bins.length;b++){
+    if(!bins[b]) continue;
+    const xm=(b+0.5)*bw,ym=(bins[b][0]+bins[b][1])/2;
+    sx+=xm; sy+=ym; sxx+=xm*xm; sxy+=xm*ym; cnt++;
+    halfT=Math.max(halfT,(bins[b][1]-bins[b][0])/2);
+  }
+  if(cnt<3) return;
+  const slope=(cnt*sxy-sx*sy)/(cnt*sxx-sx*sx),icpt=(sy-slope*sx)/cnt;
+  const centerY=function(l){ return icpt+slope*l; };
+  const px=start*bw,py=centerY(px);
+  const phi=Math.max(0,deg*Math.PI/180-Math.atan(-slope));
+  const ss=function(a,b,x){ const t=Math.min(1,Math.max(0,(x-a)/(b-a))); return t*t*(3-2*t); };
+  const nv=new THREE.Vector3(),nm=new THREE.Matrix3(),nmi=new THREE.Matrix3(),inv=new THREE.Matrix4();
+  meshes.forEach(function(n){
+    const g=n.geometry;
+    const pos=new THREE.Float32BufferAttribute(g.attributes.position.count*3,3);
+    const nor=g.attributes.normal?new THREE.Float32BufferAttribute(g.attributes.normal.count*3,3):null;
+    inv.copy(n.matrixWorld).invert();
+    nm.getNormalMatrix(n.matrixWorld); nmi.copy(nm).invert();
+    for(let i=0;i<pos.count;i++){
+      v.fromBufferAttribute(g.attributes.position,i).applyMatrix4(n.matrixWorld);
+      if(nor) nv.fromBufferAttribute(g.attributes.normal,i).applyMatrix3(nm);
+      const lat=lx?v.x:v.z,s=lat<0?-1:1;
+      const w=v.y>centerY(s*lat)-halfT-h*0.02?ss(px-h*0.02,px+h*0.03,s*lat):0;
+      if(w>0){
+        const a=-s*phi*w,ca=Math.cos(a),sa=Math.sin(a);
+        const rl=lat-s*px,ry=v.y-py;
+        const nl=s*px+rl*ca-ry*sa,ny=py+rl*sa+ry*ca;
+        if(lx) v.x=nl; else v.z=nl;
+        v.y=ny;
+        if(nor){
+          const nl2=(lx?nv.x:nv.z)*ca-nv.y*sa,ny2=(lx?nv.x:nv.z)*sa+nv.y*ca;
+          if(lx) nv.x=nl2; else nv.z=nl2;
+          nv.y=ny2;
+        }
+      }
+      v.applyMatrix4(inv);
+      pos.setXYZ(i,v.x,v.y,v.z);
+      if(nor){ nv.applyMatrix3(nmi).normalize(); nor.setXYZ(i,nv.x,nv.y,nv.z); }
+    }
+    const ng=g.clone();
+    ng.setAttribute('position',pos);
+    if(nor) ng.setAttribute('normal',nor);
+    ng.computeBoundingBox(); ng.computeBoundingSphere();
+    n.geometry=ng;
+  });
 }
 
 const roster=document.getElementById('roster');

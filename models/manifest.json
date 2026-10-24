@@ -1,5 +1,5 @@
 {
-  "_ayuda": "Modelos que se cargan solos al abrir el museo servido por http (servir.bat). La ruta es relativa a index.html. Formato: id-asesino (campo id de js/data.js) -> url del .glb. Los .glb estan optimizados (WebP + meshopt) desde los originales de source/. Tambien admite un objeto {url, rot (grados), h (altura en metros), hide (mallas a ocultar)} para girar, escalar o quitar piezas sueltas.",
+  "_ayuda": "Modelos que se cargan solos al abrir el museo servido por http (servir.bat). La ruta es relativa a index.html. Formato: id-asesino (campo id de js/data.js) -> url del .glb. Los .glb estan optimizados (WebP + meshopt) desde los originales de source/. Tambien admite un objeto {url, rot (grados), h (altura en metros), hide (mallas a ocultar), armsDown (grados para bajar los brazos de un modelo en cruz sin huesos)} para girar, escalar o quitar piezas sueltas.",
   "killers": {
     "shape": "models/shape.glb?v=3",
     "cannibal": "models/cannibal.glb?v=3",
@@ -47,7 +47,8 @@
       "hide": [
         "Object_18",
         "SM_K43_Hook_01001_MI_K43_Hook_01_0"
-      ]
+      ],
+      "armsDown": 80
     }
   }
 }
