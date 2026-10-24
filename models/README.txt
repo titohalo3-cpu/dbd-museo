@@ -6,7 +6,7 @@ Coloca aqui tus archivos .glb / .gltf con este nombre:
     <id-asesino>.glb
 
     demogorgon.glb            The Demogorgon        <- YA INCLUIDO
-    trickster.glb             The Trickster         <- YA INCLUIDO
+    trickster.glb             The Trickster         (retirado: Work In Progress)
     animatronic.glb           The Animatronic
     trapper.glb               The Trapper
     huntress.glb              The Huntress

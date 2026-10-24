@@ -868,63 +868,91 @@ function relaxArms(obj){
   const toLocal=function(w,parent){ return w.clone().applyQuaternion(parent.getWorldQuaternion(new THREE.Quaternion()).invert()).normalize(); };
   return recs.map(function(r){
     const side=r.bone.getWorldPosition(new THREE.Vector3()).sub(center).dot(lat)<0?-1:1;
-    return {bone:r.bone,rest:r.bone.quaternion.clone(),swing:toLocal(lat,r.bone.parent),
+    return {bone:r.bone,rest:r.bone.quaternion.clone(),swing:toLocal(lat,r.bone.parent),flare:toLocal(front,r.bone.parent),
       elbow:r.elbow,elbowRest:r.elbow.quaternion.clone(),bend:toLocal(bend,r.bone),side:side};
   });
 }
-/* Balanceo suave de brazos: vaivén adelante/atrás alterno y codo algo doblado que respira. */
-const qArm=new THREE.Quaternion();
+/* Respiración y brazos, inspirados en los showcases y tráilers de Behaviour:
+   el asesino quieto pero vivo, con respiración pesada que levanta pecho y
+   hombros, brazos que acompañan cada inspiración con un vaivén lento y la
+   cabeza que vigila. Myers inclina la cabeza, como en sus películas.
+   Los huesos que ya mueve una animación reciben el gesto encima (rest=null);
+   el resto se recalcula desde su pose de reposo en cada fotograma. */
+const BREATH=1.35;
+const qArm=new THREE.Quaternion(),qTmp=new THREE.Quaternion();
+function applyRot(rec,angle){
+  qTmp.setFromAxisAngle(rec.axis,angle);
+  if(rec.rest) rec.bone.quaternion.copy(qTmp).multiply(rec.rest);
+  else rec.bone.quaternion.premultiply(qTmp);
+}
 function swingArms(st,t){
-  const p=t+st.armPh;
+  const p=t+st.breath.ph,br=Math.sin(p*BREATH);
   st.arms.forEach(function(r){
-    qArm.setFromAxisAngle(r.swing,r.side*0.09*Math.sin(p*0.9)+0.025*Math.sin(p*1.7));
-    r.bone.quaternion.copy(qArm).multiply(r.rest);
-    qArm.setFromAxisAngle(r.bend,0.22+0.09*Math.sin(p*0.9+1.1+r.side*0.6));
+    qArm.setFromAxisAngle(r.swing,r.side*0.06*Math.sin(p*0.55)+0.02*br);
+    qTmp.setFromAxisAngle(r.flare,r.side*0.035*(br+1));
+    r.bone.quaternion.copy(qTmp).multiply(qArm).multiply(r.rest);
+    qArm.setFromAxisAngle(r.bend,0.24+0.07*Math.sin(p*BREATH+0.6));
     r.elbow.quaternion.copy(qArm).multiply(r.elbowRest);
   });
 }
-function findHead(obj){
+function breathRig(obj,animated,id){
+  obj.updateMatrixWorld(true);
+  const front=new THREE.Vector3(0,0,1).applyQuaternion(obj.parent.getWorldQuaternion(new THREE.Quaternion()));
+  const lat=new THREE.Vector3(0,1,0).cross(front).normalize();
+  const center=obj.getWorldPosition(new THREE.Vector3());
+  const rec=function(bone,axisW,amp){
+    const pw=bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    return {bone:bone,axis:axisW.clone().applyQuaternion(pw).normalize(),amp:amp,
+      rest:animated.has(bone.name)?null:bone.quaternion.clone()};
+  };
+  const wy=function(b){ return b.getWorldPosition(new THREE.Vector3()).y; };
+  const spine=[],clav=[];
   let head=null;
   obj.traverse(function(n){
-    if(n.isBone&&/head/i.test(n.name)&&!NOT_MAIN.test(n.name)&&(!head||n.name.length<head.name.length)) head=n;
+    if(!n.isBone||!n.parent||NOT_MAIN.test(n.name)||/latissimus/i.test(n.name)) return;
+    if(/spine|chest|torso/i.test(n.name)) spine.push(n);
+    else if(/clavicle|shoulder_1/i.test(n.name)) clav.push(n);
+    else if(/head/i.test(n.name)&&(!head||n.name.length<head.name.length)) head=n;
   });
-  if(!head||!head.parent) return null;
-  const pw=new THREE.Quaternion();
-  obj.updateMatrixWorld(true);
-  head.parent.getWorldQuaternion(pw);
-  return {bone:head,rest:head.quaternion.clone(),axis:new THREE.Vector3(0,1,0).applyQuaternion(pw.invert())};
+  spine.sort(function(a,b){ return wy(b)-wy(a); });
+  return {chest:spine.slice(0,2).map(function(b){ return rec(b,lat,0.03); }),
+    clav:clav.map(function(b){
+      const side=b.getWorldPosition(new THREE.Vector3()).sub(center).dot(lat)<0?-1:1;
+      return rec(b,front,side*0.05);
+    }),
+    head:head?rec(head,new THREE.Vector3(0,1,0),0.16):null,
+    tilt:head&&id==='shape'?rec(head,front,0.3):null};
 }
 function giveIdle(i,obj){
-  const src=KILLERS[i].model,st=statues[i];
+  const k=KILLERS[i],src=k.model,st=statues[i];
+  const animated=new Set();
   if(isGameRig(src)){
     if(!IDLE_SRC){ st.waitIdle=true; return; }
     if(src.userData.retClip===undefined) src.userData.retClip=retargetIdle(src);
     const clip=src.userData.retClip;
     if(clip){
-      st.arms=relaxArms(obj);
-      st.armPh=Math.random()*6.28;
       const mixer=new THREE.AnimationMixer(obj);
       const act=mixer.clipAction(clip);
       act.time=Math.random()*clip.duration;
       act.play();
       mixers.set(i,mixer);
-      return;
+      clip.tracks.forEach(function(t){ animated.add(t.name.split('.')[0]); });
     }
   }
   st.arms=relaxArms(obj);
-  st.armPh=Math.random()*6.28;
   st.armU=src.userData.armU||null;
-  st.breath={ph:Math.random()*6.28,head:findHead(obj)};
+  st.breath=Object.assign({ph:Math.random()*6.28},breathRig(obj,animated,k.id));
 }
-const qHead=new THREE.Quaternion();
 function breathe(st,t){
-  const b=st.breath,p=t+b.ph;
-  st.pivot.scale.y=1+0.007*Math.sin(p*1.7);
-  st.pivot.rotation.y+=0.03*Math.sin(p*0.4);
-  if(b.head){
-    qHead.setFromAxisAngle(b.head.axis,0.16*Math.sin(p*0.45));
-    b.head.bone.quaternion.copy(qHead).multiply(b.head.rest);
-  }
+  const b=st.breath,p=t+b.ph,br=Math.sin(p*BREATH);
+  st.pivot.scale.set(1+0.005*br,1+0.008*br,1+0.005*br);
+  st.pivot.rotation.y+=0.025*Math.sin(p*0.37);
+  b.chest.forEach(function(r){ applyRot(r,r.amp*br); });
+  b.clav.forEach(function(r){ applyRot(r,r.amp*(br+1)*0.5); });
+  if(b.head) applyRot(b.head,b.head.amp*Math.sin(p*0.45)*(b.tilt?0.4:1));
+  if(b.tilt) applyRot(b.tilt,b.tilt.amp*(0.6+0.4*Math.sin(p*0.21)));
+  if(st.arms&&st.arms.length) swingArms(st,t);
+  if(st.armU) st.armU.value=Math.sin(p*0.55)*0.6+br*0.4;
 }
 function updateCount(){
   const el=document.getElementById('footCount');
@@ -1706,19 +1734,18 @@ function updateStatues(dt){
       if(Math.abs(st.spin)<1e-3) st.spin=0;
     }
     st.pivot.rotation.y=st.base+st.spin;
-    if(st.breath||st.arms||st.armU){
-      const dx=st.x-player.x,dz=st.z-player.z;
-      if(dx*dx+dz*dz<900){
-        if(st.breath) breathe(st,clock.elapsedTime);
-        if(st.arms&&st.arms.length) swingArms(st,clock.elapsedTime);
-        if(st.armU) st.armU.value=Math.sin(clock.elapsedTime*0.9+st.armPh);
-      }
-    }
   }
   mixers.forEach(function(m,i){
     const s=statues[i],dx=s.x-player.x,dz=s.z-player.z;
     if(dx*dx+dz*dz<900) m.update(dt);
   });
+  /* Después de las animaciones: la respiración se suma a lo que dejan. */
+  for(let i=0;i<statues.length;i++){
+    const st=statues[i];
+    if(!st.breath) continue;
+    const dx=st.x-player.x,dz=st.z-player.z;
+    if(dx*dx+dz*dz<900) breathe(st,clock.elapsedTime);
+  }
 }
 
 const clock=new THREE.Clock();

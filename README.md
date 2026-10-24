@@ -89,7 +89,7 @@ seleccionado en ese momento.
     {
       "killers": {
         "demogorgon": "models/demogorgon.glb",
-        "trickster":  "models/trickster.glb?v=2",
+        "nightmare":  "models/nightmare.glb?v=3",
         "trapper":    "models/trapper.glb"
       }
     }

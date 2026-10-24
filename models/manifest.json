@@ -1,13 +1,17 @@
 {
   "_ayuda": "Modelos que se cargan solos al abrir el museo servido por http (servir.bat). La ruta es relativa a index.html. Formato: id-asesino (campo id de js/data.js) -> url del .glb. Los .glb estan optimizados (WebP + meshopt) desde los originales de source/. Tambien admite un objeto {url, rot (grados), h (altura en metros), hide (mallas a ocultar), armsDown (grados para bajar los brazos de un modelo en cruz sin huesos)} para girar, escalar o quitar piezas sueltas.",
   "killers": {
-    "shape": "models/shape.glb?v=3",
+    "shape": {
+      "url": "models/shape.glb?v=3",
+      "hide": [
+        "SM_Knife_Myers_01_MI_Knife_Myers_01_var00_0"
+      ]
+    },
     "cannibal": "models/cannibal.glb?v=3",
     "nightmare": "models/nightmare.glb?v=3",
     "ghost-face": "models/ghostface.glb?v=3",
     "demogorgon": "models/demogorgon.glb?v=3",
     "wraith": "models/wraith.glb?v=1",
-    "trickster": "models/trickster.glb?v=2",
     "knight": {
       "url": "models/knight.glb?v=3",
       "hide": [
