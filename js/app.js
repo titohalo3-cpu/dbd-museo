@@ -768,6 +768,8 @@ function renderStatue(i){
   pivot.add(obj);
   pivot.scale.set(1,1,1);
   st.breath=null;
+  st.arms=null;
+  st.armU=null;
   st.waitIdle=false;
   st.renderedKind=src?'glb':'proc';
   if(src && src.userData && src.userData.clips && src.userData.clips.length){
@@ -835,7 +837,7 @@ function retargetIdle(model){
 const NOT_MAIN=/twist|corrective|roll|_out|fwd|_in_|bck|pec|scap|lip|cheek|mouth|eye|jaw|brow|nose|tendril|ACC|(^|_)ear(_|$)/i;
 /* Baja los brazos en cruz girando cada brazo hacia abajo en el espacio del mundo. */
 function relaxArms(obj){
-  const arms=[];
+  const arms=[],recs=[];
   obj.traverse(function(n){
     if(n.isBone&&/upper_?arm|arm_(left|right)_shoulder_2|(left|right)arm$|^joint_Shoulder(LT|RT)_01/i.test(n.name)&&!NOT_MAIN.test(n.name)) arms.push(n);
   });
@@ -846,15 +848,40 @@ function relaxArms(obj){
     if(!child) return;
     obj.updateMatrixWorld(true);
     bone.getWorldPosition(a); child.getWorldPosition(b);
-    const d=b.sub(a).normalize();
-    if(d.y<-0.75) return;
-    const out=new THREE.Vector3(d.x,0,d.z).normalize().multiplyScalar(0.3);
-    const target=out.add(new THREE.Vector3(0,-1,0)).normalize();
-    qw.setFromUnitVectors(d,target);
-    bone.parent.getWorldQuaternion(pw);
-    bone.quaternion.premultiply(pw.clone().invert().multiply(qw).multiply(pw));
+    const d=b.clone().sub(a).normalize();
+    if(d.y>-0.75){
+      const out=new THREE.Vector3(d.x,0,d.z).normalize().multiplyScalar(0.3);
+      const target=out.add(new THREE.Vector3(0,-1,0)).normalize();
+      qw.setFromUnitVectors(d,target);
+      bone.parent.getWorldQuaternion(pw);
+      bone.quaternion.premultiply(pw.clone().invert().multiply(qw).multiply(pw));
+    }
+    recs.push({bone:bone,elbow:child});
   });
   obj.updateMatrixWorld(true);
+  /* Ejes para el balanceo: lateral (adelante/atrás) y de flexión del codo,
+     pasados al espacio del padre de cada hueso. */
+  const front=new THREE.Vector3(0,0,1).applyQuaternion(obj.parent.getWorldQuaternion(new THREE.Quaternion()));
+  const lat=new THREE.Vector3(0,1,0).cross(front).normalize();
+  const bend=new THREE.Vector3(0,-1,0).cross(front).normalize();
+  const center=obj.getWorldPosition(new THREE.Vector3());
+  const toLocal=function(w,parent){ return w.clone().applyQuaternion(parent.getWorldQuaternion(new THREE.Quaternion()).invert()).normalize(); };
+  return recs.map(function(r){
+    const side=r.bone.getWorldPosition(new THREE.Vector3()).sub(center).dot(lat)<0?-1:1;
+    return {bone:r.bone,rest:r.bone.quaternion.clone(),swing:toLocal(lat,r.bone.parent),
+      elbow:r.elbow,elbowRest:r.elbow.quaternion.clone(),bend:toLocal(bend,r.bone),side:side};
+  });
+}
+/* Balanceo suave de brazos: vaivén adelante/atrás alterno y codo algo doblado que respira. */
+const qArm=new THREE.Quaternion();
+function swingArms(st,t){
+  const p=t+st.armPh;
+  st.arms.forEach(function(r){
+    qArm.setFromAxisAngle(r.swing,r.side*0.09*Math.sin(p*0.9)+0.025*Math.sin(p*1.7));
+    r.bone.quaternion.copy(qArm).multiply(r.rest);
+    qArm.setFromAxisAngle(r.bend,0.22+0.09*Math.sin(p*0.9+1.1+r.side*0.6));
+    r.elbow.quaternion.copy(qArm).multiply(r.elbowRest);
+  });
 }
 function findHead(obj){
   let head=null;
@@ -874,7 +901,8 @@ function giveIdle(i,obj){
     if(src.userData.retClip===undefined) src.userData.retClip=retargetIdle(src);
     const clip=src.userData.retClip;
     if(clip){
-      relaxArms(obj);
+      st.arms=relaxArms(obj);
+      st.armPh=Math.random()*6.28;
       const mixer=new THREE.AnimationMixer(obj);
       const act=mixer.clipAction(clip);
       act.time=Math.random()*clip.duration;
@@ -883,7 +911,9 @@ function giveIdle(i,obj){
       return;
     }
   }
-  relaxArms(obj);
+  st.arms=relaxArms(obj);
+  st.armPh=Math.random()*6.28;
+  st.armU=src.userData.armU||null;
   st.breath={ph:Math.random()*6.28,head:findHead(obj)};
 }
 const qHead=new THREE.Quaternion();
@@ -1026,6 +1056,10 @@ function lowerArmsMesh(obj,h,deg){
     const nor=g.attributes.normal?new THREE.Float32BufferAttribute(g.attributes.normal.count*3,3):null;
     inv.copy(n.matrixWorld).invert();
     nm.getNormalMatrix(n.matrixWorld); nmi.copy(nm).invert();
+    /* Datos para el balanceo en el shader: hombro y eje lateral en espacio local. */
+    const piv=new THREE.Float32BufferAttribute(pos.count*3,3),axw=new THREE.Float32BufferAttribute(pos.count*4,4);
+    const pivL=[-1,1].map(function(s){ return (lx?new THREE.Vector3(s*px,py,0):new THREE.Vector3(0,py,s*px)).applyMatrix4(inv); });
+    const axL=(lx?new THREE.Vector3(1,0,0):new THREE.Vector3(0,0,1)).transformDirection(inv);
     for(let i=0;i<pos.count;i++){
       v.fromBufferAttribute(g.attributes.position,i).applyMatrix4(n.matrixWorld);
       if(nor) nv.fromBufferAttribute(g.attributes.normal,i).applyMatrix3(nm);
@@ -1046,13 +1080,36 @@ function lowerArmsMesh(obj,h,deg){
       v.applyMatrix4(inv);
       pos.setXYZ(i,v.x,v.y,v.z);
       if(nor){ nv.applyMatrix3(nmi).normalize(); nor.setXYZ(i,nv.x,nv.y,nv.z); }
+      const pl=pivL[s<0?0:1];
+      piv.setXYZ(i,pl.x,pl.y,pl.z);
+      axw.setXYZW(i,axL.x,axL.y,axL.z,w*s);
     }
     const ng=g.clone();
     ng.setAttribute('position',pos);
     if(nor) ng.setAttribute('normal',nor);
+    ng.setAttribute('armPivot',piv);
+    ng.setAttribute('armAxisW',axw);
     ng.computeBoundingBox(); ng.computeBoundingSphere();
     n.geometry=ng;
   });
+  /* El vaivén lo hace la GPU: cada vértice del brazo gira alrededor del hombro
+     según su peso; uArm (−1..1) lo mueve updateStatues cada fotograma. */
+  const armU={value:0};
+  meshes.forEach(function(n){
+    (Array.isArray(n.material)?n.material:[n.material]).forEach(function(m){
+      if(!m||m.userData.armSway) return;
+      m.userData.armSway=true;
+      m.customProgramCacheKey=function(){ return 'armsway'; };
+      m.onBeforeCompile=function(sh){
+        sh.uniforms.uArm=armU;
+        sh.vertexShader=sh.vertexShader
+          .replace('#include <common>','#include <common>\nattribute vec3 armPivot;\nattribute vec4 armAxisW;\nuniform float uArm;\nvec3 armRot(vec3 p,vec3 k,float a){ return p*cos(a)+cross(k,p)*sin(a)+k*dot(k,p)*(1.0-cos(a)); }')
+          .replace('#include <beginnormal_vertex>','#include <beginnormal_vertex>\nfloat armA=armAxisW.w*0.1*uArm;\nobjectNormal=armRot(objectNormal,armAxisW.xyz,armA);')
+          .replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed=armPivot+armRot(transformed-armPivot,armAxisW.xyz,armA);');
+      };
+    });
+  });
+  obj.userData.armU=armU;
 }
 
 const roster=document.getElementById('roster');
@@ -1649,9 +1706,13 @@ function updateStatues(dt){
       if(Math.abs(st.spin)<1e-3) st.spin=0;
     }
     st.pivot.rotation.y=st.base+st.spin;
-    if(st.breath){
+    if(st.breath||st.arms||st.armU){
       const dx=st.x-player.x,dz=st.z-player.z;
-      if(dx*dx+dz*dz<900) breathe(st,clock.elapsedTime);
+      if(dx*dx+dz*dz<900){
+        if(st.breath) breathe(st,clock.elapsedTime);
+        if(st.arms&&st.arms.length) swingArms(st,clock.elapsedTime);
+        if(st.armU) st.armU.value=Math.sin(clock.elapsedTime*0.9+st.armPh);
+      }
     }
   }
   mixers.forEach(function(m,i){
