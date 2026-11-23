@@ -740,6 +740,9 @@ function disposeObj(o){
   });
 }
 const mixers=new Map();
+/* Escultura cubierta (tools/blender/escultura_cubierta.py): sustituye al cartel
+   «Work In Progress» en los asesinos sin modelo en cuanto termina de cargar. */
+let VEIL=null;
 function cloneModel(src){
   let skinned=false;
   src.traverse(function(o){ if(o.isSkinnedMesh) skinned=true; });
@@ -764,7 +767,7 @@ function renderStatue(i){
   }
   let obj;
   if(src) obj=cloneModel(src);
-  else obj=buildWipSign(k);
+  else obj=VEIL?cloneModel(VEIL):buildWipSign(k);
   pivot.add(obj);
   pivot.scale.set(1,1,1);
   st.breath=null;
@@ -785,6 +788,8 @@ function renderStatue(i){
     }
   } else if(src){
     giveIdle(i,obj);
+  } else if(VEIL){
+    st.breath={ph:Math.random()*6.28,chest:[],clav:[],head:null,tilt:null};
   }
   const item=document.getElementById('roster');
   if(item&&item.children[i]) item.children[i].classList.toggle('real',!!src);
@@ -1460,6 +1465,11 @@ try{ ktx2Loader.detectSupport(renderer); }catch(e){}
 gltfLoader.setDRACOLoader(dracoLoader);
 gltfLoader.setKTX2Loader(ktx2Loader);
 try{ gltfLoader.setMeshoptDecoder(MeshoptDecoder); }catch(e){}
+gltfLoader.load('models/velada.glb',function(g){
+  VEIL=normalizeModel(g.scene,{h:1.95});
+  VEIL.userData.fromModel=true;
+  KILLERS.forEach(function(k,i){ if(!k.model) renderStatue(i); });
+},undefined,function(){ /* sin servidor (file://) se queda el cartel */ });
 
 function pickIdle(clips){
   if(!clips||!clips.length) return -1;

@@ -28,6 +28,16 @@ paquete `BlenderFoundation.Blender`). Para actualizarlo: `winget upgrade Blender
 4. Añádelo a `models/manifest.json`. El museo reproduce su animación propia y el cartel
    «Work In Progress» desaparece solo.
 
+## Escultura cubierta
+
+`tools/blender/escultura_cubierta.py` genera `models/velada.glb`: una figura genérica tapada con una
+sábana (diseño propio, sin imitar a ningún asesino). El museo la pone en los pedestales que no
+tienen modelo y le añade respiración.
+
+```
+"C:\Program Files\Blender Foundation\Blender 5.3\blender.exe" -b --factory-startup --python tools/blender/escultura_cubierta.py -- models/velada.glb --render captura.png
+```
+
 ## Retocar a mano en la interfaz
 
 1. **File → Import → glTF 2.0** y elige el modelo.
