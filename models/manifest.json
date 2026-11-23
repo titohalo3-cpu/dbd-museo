@@ -7,19 +7,19 @@
         "SM_Knife_Myers_01_MI_Knife_Myers_01_var00_0"
       ]
     },
-    "cannibal": "models/cannibal.glb?v=3",
-    "nightmare": "models/nightmare.glb?v=3",
-    "ghost-face": "models/ghostface.glb?v=3",
+    "cannibal": "models/cannibal.glb?v=4",
+    "nightmare": "models/nightmare.glb?v=4",
+    "ghost-face": "models/ghostface.glb?v=4",
     "demogorgon": "models/demogorgon.glb?v=3",
     "wraith": "models/wraith.glb?v=1",
     "knight": {
-      "url": "models/knight.glb?v=3",
+      "url": "models/knight.glb?v=5",
       "hide": [
         "Object_75"
       ]
     },
     "singularity": {
-      "url": "models/singularity.glb?v=3",
+      "url": "models/singularity.glb?v=5",
       "hide": [
         "Object_91",
         "Object_92",
@@ -32,7 +32,7 @@
       "h": 0.95
     },
     "unknown": {
-      "url": "models/unknown.glb?v=3",
+      "url": "models/unknown.glb?v=5",
       "hide": [
         "Object_155",
         "Object_116",
@@ -40,7 +40,7 @@
       ]
     },
     "ghoul": {
-      "url": "models/ghoul.glb?v=3",
+      "url": "models/ghoul.glb?v=4",
       "hide": [
         "Object_125"
       ]

@@ -140,3 +140,7 @@ Los personajes y sus modelos originales pertenecen a Behaviour Interactive y a s
 respectivos licenciantes. Los `.glb` de `models/` son versiones optimizadas de
 descargas de Sketchfab: antes de publicarlos, revisa la licencia de cada descarga.
 Proyecto de fans sin ánimo de lucro.
+
+## Blender
+
+Para preparar modelos nuevos (brazos abajo, animación de reposo, reducción) mira `tools/blender/GUIA-BLENDER.md`.

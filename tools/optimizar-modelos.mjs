@@ -28,11 +28,14 @@ const only=process.argv[2];
 for(const [f,id] of Object.entries(MAP)){
   if(only&&only!==id) continue;
   if(!existsSync(SRC+f)) continue;
-  const doc=await io.read(SRC+f);
+  /* Si hay versión preparada en Blender (source/blender/<id>.glb), manda esa. */
+  const prep='blender/'+id+'.glb';
+  const doc=await io.read(SRC+(existsSync(SRC+prep)?prep:f));
   let tris=0;
   doc.getRoot().listMeshes().forEach(m=>m.listPrimitives().forEach(p=>{ const i=p.getIndices(),a=p.getAttribute('POSITION'); tris+=(i?i.getCount():(a?a.getCount():0))/3; }));
   const anims=doc.getRoot().listAnimations();
-  const idle=anims.find(a=>/(^|\|)(QK_)?Idle$/i.test(a.getName()))||anims.find(a=>/idle/i.test(a.getName()));
+  /* Si ninguna se llama idle (las de Blender salen como "Animation"), vale la primera. */
+  const idle=anims.find(a=>/(^|\|)(QK_)?Idle$/i.test(a.getName()))||anims.find(a=>/idle/i.test(a.getName()))||anims[0];
   anims.forEach(a=>{ if(a!==idle){ a.listChannels().forEach(c=>c.dispose()); a.listSamplers().forEach(s=>s.dispose()); a.dispose(); } });
   await doc.transform(
     metalRough(), dedup(), prune(), weld(), resample(),

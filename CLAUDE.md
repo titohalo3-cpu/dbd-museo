@@ -14,7 +14,8 @@ Museo 3D de Dead by Daylight por el que se camina: pasillo con 41 asesinos sobre
 - `js/app.js` — sala, visitante (caminar/mirar/contemplar), focos y carga de modelos.
 - `js/data.js` — los 41 asesinos (`id` es la clave del manifest).
 - `js/library.js` — biblioteca de modelos (IndexedDB / carpeta vinculada).
-- `models/manifest.json` — id → `.glb`; admite `{url, rot, h, hide}`.
+- `models/manifest.json` — id → `.glb`; admite `{url, rot, h, hide, armsDown}`.
+- `tools/blender/` — Blender 5.3: `preparar_modelo.py` (brazos abajo + idle) y `GUIA-BLENDER.md`.
 - `source/` — originales de Sketchfab, sin tocar. `tools/optimizar-modelos.mjs` los pasa a `models/`.
 
 ## Interacción principal
